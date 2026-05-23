@@ -138,33 +138,37 @@ def test_incorrect_compressed_duration_metadata(mock_post):
     Verifies that OGG and MP3 formats yield accurate duration_ms metadata matching WAV.
     """
     from app.services.orchestrator_api import app
+    from app.config import settings
     client = TestClient(app)
     
     payload_wav = {
         "speaker": {"id": "npc_maria", "name": "Maria", "voice_id": "af_heart", "style": "calm"},
         "user_text": "Duration check",
-        "output": {"audio": True, "format": "wav"}
+        "output": {"audio": True},
+        "tts": {"format": "wav"}
     }
     payload_ogg = {
         "speaker": {"id": "npc_maria", "name": "Maria", "voice_id": "af_heart", "style": "calm"},
         "user_text": "Duration check",
-        "output": {"audio": True, "format": "ogg"}
+        "output": {"audio": True},
+        "tts": {"format": "ogg"}
     }
     
-    # 1. WAV Response duration
-    resp_wav = client.post("/v1/dialogue", json=payload_wav)
-    assert resp_wav.status_code == 200
-    wav_duration = resp_wav.json()["audio"]["duration_ms"]
-    
-    # 2. OGG Response duration
-    resp_ogg = client.post("/v1/dialogue", json=payload_ogg)
-    assert resp_ogg.status_code == 200
-    ogg_duration = resp_ogg.json()["audio"]["duration_ms"]
-    
-    # Both have the same 1000 sample dummy wav (41.66ms duration).
-    # We assert that the calculated duration metadata is accurate and identical.
-    assert wav_duration == ogg_duration
-    assert wav_duration == 41
+    with patch.object(settings, "unified", False):
+        # 1. WAV Response duration
+        resp_wav = client.post("/v1/dialogue", json=payload_wav)
+        assert resp_wav.status_code == 200
+        wav_duration = resp_wav.json()["audio"]["duration_ms"]
+        
+        # 2. OGG Response duration
+        resp_ogg = client.post("/v1/dialogue", json=payload_ogg)
+        assert resp_ogg.status_code == 200
+        ogg_duration = resp_ogg.json()["audio"]["duration_ms"]
+        
+        # Both have the same 1000 sample dummy wav (41.66ms duration).
+        # We assert that the calculated duration metadata is accurate and identical.
+        assert wav_duration == ogg_duration
+        assert wav_duration == 41
 
 
 @patch("httpx.AsyncClient.post", side_effect=mock_httpx_post)
@@ -175,6 +179,7 @@ def test_swallowed_validation_errors(mock_post):
     by returning 422 errors from the Gemma service.
     """
     from app.services.orchestrator_api import app
+    from app.config import settings
     client = TestClient(app)
     
     # 1. Empty user_text
@@ -183,41 +188,42 @@ def test_swallowed_validation_errors(mock_post):
         "user_text": "   ",
         "output": {"audio": False, "format": "wav"}
     }
-    response_empty = client.post("/v1/dialogue", json=payload_empty)
-    # The empty/whitespace text causes Gemma to return 422, and the orchestrator propagates it
-    assert response_empty.status_code == 422
-    assert "detail" in response_empty.json()
+    with patch.object(settings, "unified", False):
+        response_empty = client.post("/v1/dialogue", json=payload_empty)
+        # The empty/whitespace text causes Gemma to return 422, and the orchestrator propagates it
+        assert response_empty.status_code == 422
+        assert "detail" in response_empty.json()
 
-    # 2. Negative max_words
-    payload_neg = {
-        "speaker": {"id": "npc_maria", "name": "Maria", "voice_id": "af_heart", "style": "calm"},
-        "user_text": "Hello",
-        "max_words": -10,
-        "output": {"audio": False, "format": "wav"}
-    }
-    response_neg = client.post("/v1/dialogue", json=payload_neg)
-    # Negative max_words causes Gemma to return 422, and the orchestrator propagates it
-    assert response_neg.status_code == 422
-    assert "detail" in response_neg.json()
+        # 2. Negative max_words
+        payload_neg = {
+            "speaker": {"id": "npc_maria", "name": "Maria", "voice_id": "af_heart", "style": "calm"},
+            "user_text": "Hello",
+            "max_words": -10,
+            "output": {"audio": False, "format": "wav"}
+        }
+        response_neg = client.post("/v1/dialogue", json=payload_neg)
+        # Negative max_words causes Gemma to return 422, and the orchestrator propagates it
+        assert response_neg.status_code == 422
+        assert "detail" in response_neg.json()
 
 
 def test_piper_dependency_discrepancy():
     """
     Test 7: Missing Dependency Error Code Discrepancy
     Checks that requesting piper synthesis returns a 503 error
-    due to deferred import inside synthesise() raising ImportError when not in test mode.
+    due to deferred import raising ImportError when not in test mode.
     """
-    import sys
-    from app.services.tts_service import app, _workers
+    from app.services.tts_service import app
     from app.config import settings
+    from app.core.orchestrator import _providers
     client = TestClient(app)
     
-    old_worker = _workers.get("piper")
-    _workers["piper"] = None
+    old_provider = _providers.get("tts_piper")
+    _providers["tts_piper"] = None
     
     try:
         with patch.object(settings, "mode", "dev"):
-            with patch.dict("sys.modules", {"app.services.tts.piper_worker": None}):
+            with patch.dict("sys.modules", {"app.providers.tts.piper": None}):
                 response = client.post("/synthesize", json={
                     "text": "Hello",
                     "engine": "piper"
@@ -226,4 +232,4 @@ def test_piper_dependency_discrepancy():
                 assert response.status_code == 503
                 assert "not installed" in response.json()["detail"].lower()
     finally:
-        _workers["piper"] = old_worker
+        _providers["tts_piper"] = old_provider

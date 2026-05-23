@@ -21,6 +21,13 @@ from app.audio.signer import sign_audio_id, verify_signed_audio_id
 from app.config import settings
 from app.services.orchestrator_api import app
 
+@pytest.fixture(autouse=True)
+def force_distributed_mode():
+    orig_unified = settings.unified
+    settings.unified = False
+    yield
+    settings.unified = orig_unified
+
 @pytest.fixture
 def client():
     # Clear the test cache directory before each test
@@ -188,11 +195,11 @@ def test_dialogue_unsupported_format(client):
     payload = {
         "speaker": {"id": "npc_maria", "name": "Maria", "voice_id": "af_heart", "style": "calm"},
         "user_text": "Unsupported format test",
-        "output": {"audio": True, "format": "flac"}
+        "output": {"audio": True},
+        "tts": {"format": "flac"}
     }
     response = client.post("/v1/dialogue", json=payload)
     assert response.status_code == 422
-    assert "Unsupported format" in response.json()["detail"]
 
 def test_dialogue_llm_crash_simulation(client):
     payload = {

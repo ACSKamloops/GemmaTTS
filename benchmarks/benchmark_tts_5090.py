@@ -1,5 +1,7 @@
 import time
+import os
 import torch
+import argparse
 import numpy as np
 from app.services.tts_service import get_worker
 from app.audio.probe import get_audio_duration_ms
@@ -12,13 +14,26 @@ def print_gpu_memory():
         return f"{allocated:.2f} GB / {reserved:.2f} GB"
     return "N/A"
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run TTS Performance Benchmark")
+    parser.add_argument("--include-f5", action="store_true", help="Include F5-TTS in benchmark (opt-in)")
+    return parser.parse_args()
+
 def run_benchmark():
+    args = parse_args()
     print("=== TTS Performance Benchmark ===")
     print("Measuring latency, RTF, and VRAM usage on available engines.")
     
     text = "The quick brown fox jumps over the lazy dog. Voice synthesis is fast and highly efficient."
-    engines = ["chatterbox", "kokoro", "piper", "dia", "f5_tts"]
+    engines = ["chatterbox", "kokoro", "piper", "dia"]
     
+    # Gate F5-TTS
+    enable_f5 = args.include_f5 or settings.enable_f5_tts or os.environ.get("ENABLE_F5_TTS", "false").lower() == "true"
+    if enable_f5:
+        engines.append("f5_tts")
+    else:
+        print("Note: f5_tts is excluded from the benchmark by default. Pass --include-f5 or set ENABLE_F5_TTS=true to include it.")
+        
     results = []
     
     for engine in engines:

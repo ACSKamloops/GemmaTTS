@@ -25,7 +25,6 @@ class Context(BaseModel):
 
 class OutputConfig(BaseModel):
     audio: bool
-    format: str
 
 class TTSConfig(BaseModel):
     engine: Literal["chatterbox", "dia", "kokoro", "piper", "f5_tts"] = "chatterbox"
@@ -72,8 +71,8 @@ async def post_dialogue(
     request: Request,
     cache_control: Optional[str] = Header(None)
 ):
-    if req.output.audio and req.output.format not in ("wav", "ogg", "mp3"):
-        raise HTTPException(status_code=422, detail=f"Unsupported format: {req.output.format}")
+    if req.output.audio and req.tts.format not in ("wav", "ogg", "mp3"):
+        raise HTTPException(status_code=422, detail=f"Unsupported format: {req.tts.format}")
 
     # Gate F5-TTS
     _check_f5_tts_gating(req.tts.engine)
@@ -116,7 +115,7 @@ async def post_dialogue(
         facts=facts_list,
         max_words=req.max_words,
         audio_enabled=req.output.audio,
-        audio_format=req.output.format,
+        audio_format=req.tts.format,
         cache_control=cache_control,
         client_disconnect_check=is_disconnected
     )

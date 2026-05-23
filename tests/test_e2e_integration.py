@@ -19,7 +19,7 @@ import httpx
 import pytest
 from fastapi import FastAPI, HTTPException, Header, Request, Response
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Real codebase imports
 from app.config import settings
@@ -215,7 +215,12 @@ class Context(BaseModel):
 
 class OutputConfig(BaseModel):
     audio: bool
-    format: str
+
+class TTSConfig(BaseModel):
+    engine: str = "chatterbox"
+    voice_id: str = "default"
+    format: str = "wav"
+    profile: str = "voice_agent_fast"
 
 class DialogueRequest(BaseModel):
     request_id: Optional[str] = None
@@ -224,6 +229,7 @@ class DialogueRequest(BaseModel):
     user_text: str
     max_words: Optional[int] = 150
     output: OutputConfig
+    tts: TTSConfig = Field(default_factory=TTSConfig)
     test_mode: Optional[bool] = True
 
 class AudioMetadata(BaseModel):
@@ -275,7 +281,7 @@ async def dialogue(req: DialogueRequest, request: Request, cache_control: Option
     
     # Validate format parameter (F3-7)
     supported_formats = {"wav", "ogg", "mp3", "pcm"}
-    fmt = req.output.format.lower().strip()
+    fmt = req.tts.format.lower().strip()
     if fmt not in supported_formats:
         raise HTTPException(status_code=422, detail=f"Unsupported format: {fmt}")
         
@@ -733,7 +739,8 @@ def test_f3_3_orchestrator_audio_ogg(run_e2e_services):
     payload = {
         "speaker": {"id": "npc_maria", "name": "Maria", "voice_id": "af_heart", "style": "calm"},
         "user_text": "Test ogg",
-        "output": {"audio": True, "format": "ogg"}
+        "output": {"audio": True},
+        "tts": {"format": "ogg"}
     }
     resp_dial = httpx.post(url_dial, json=payload)
     signed_id = resp_dial.json()["audio"]["audio_id"]
@@ -748,7 +755,8 @@ def test_f3_4_orchestrator_audio_mp3(run_e2e_services):
     payload = {
         "speaker": {"id": "npc_maria", "name": "Maria", "voice_id": "af_heart", "style": "calm"},
         "user_text": "Test mp3",
-        "output": {"audio": True, "format": "mp3"}
+        "output": {"audio": True},
+        "tts": {"format": "mp3"}
     }
     resp_dial = httpx.post(url_dial, json=payload)
     signed_id = resp_dial.json()["audio"]["audio_id"]
@@ -968,7 +976,8 @@ def test_f3_7_orchestrator_unsupported_format(run_e2e_services):
     payload = {
         "speaker": {"id": "npc_maria", "name": "Maria", "voice_id": "af_heart", "style": "calm"},
         "user_text": "Hello",
-        "output": {"audio": True, "format": "flac"}
+        "output": {"audio": True},
+        "tts": {"format": "flac"}
     }
     resp = httpx.post(url, json=payload)
     assert resp.status_code == 422

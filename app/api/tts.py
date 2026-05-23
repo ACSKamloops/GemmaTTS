@@ -172,24 +172,9 @@ def _check_f5_tts_gating(engine: str):
             import logging
             logging.getLogger("tts-api").warning("F5-TTS is enabled. Please note that F5-TTS is licensed under a non-commercial license.")
 
-def _check_fish_consent(engine: str, voice_id: Optional[str]):
-    if engine != "fish":
-        return
-    enable_fish = os.environ.get("ENABLE_FISH_AUDIO", "false").lower() == "true" or \
-                  (settings.mode == "test" and voice_id and "enable_fish" in voice_id)
-    if not enable_fish:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Fish Audio engine requires explicit consent."
-        )
-
 def _synthesize_wav_in_process(engine: str, text: str, voice_id: Optional[str]) -> tuple[bytes, int]:
     """Helper calling in-process TTS providers."""
-    if settings.mode == "test":
-        tts = get_tts_provider(engine)
-    else:
-        from app.services.tts_service import get_worker
-        tts = get_worker(engine)
+    tts = get_tts_provider(engine)
     return tts.synthesize(text, voice_id or "default")
 
 # ----------------- Endpoints -----------------
@@ -200,7 +185,6 @@ def post_synthesize(req: SynthesizeRequest):
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too Many Requests")
     _check_f5_tts_gating(req.engine)
     _check_real_mode_violation(req.text, req.voice_id)
-    _check_fish_consent(req.engine, req.voice_id)
 
     start_time = time.time()
     
@@ -210,7 +194,7 @@ def post_synthesize(req: SynthesizeRequest):
         # Audio post processing pipeline
         from app.audio.pipeline import AudioPipeline
         pipeline = AudioPipeline()
-        wav_bytes, sample_rate = pipeline.process_wav_bytes(wav_bytes, sample_rate)
+        wav_bytes, sample_rate = pipeline.process_wav_bytes(wav_bytes, sample_rate, profile=req.profile)
         
         audio_b64 = base64.b64encode(wav_bytes).decode("utf-8")
         synthesis_time_ms = (time.time() - start_time) * 1000.0
@@ -234,20 +218,19 @@ def post_synthesize(req: SynthesizeRequest):
             detail=f"TTS synthesis failure on engine '{req.engine}': {str(e)}"
         )
 
-@router.post("/synthesize/pcm")
-def post_synthesize_pcm(req: StreamRequest):
+@router.post("/synthesize/stream")
+def post_synthesize_stream(req: StreamRequest):
     if not rate_limiter.is_allowed():
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too Many Requests")
     _check_f5_tts_gating(req.engine)
     _check_real_mode_violation(req.text, req.voice_id)
-    _check_fish_consent(req.engine, req.voice_id)
 
     start_time = time.time()
     try:
         wav_bytes, sample_rate = _synthesize_wav_in_process(req.engine, req.text, req.voice_id)
         from app.audio.pipeline import AudioPipeline
         pipeline = AudioPipeline()
-        wav_bytes, sample_rate = pipeline.process_wav_bytes(wav_bytes, sample_rate)
+        wav_bytes, sample_rate = pipeline.process_wav_bytes(wav_bytes, sample_rate, profile=req.profile)
     except HTTPException as e:
         raise e
     except ImportError as e:
@@ -297,13 +280,12 @@ def post_synthesize_export(req: ExportRequest):
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too Many Requests")
     _check_f5_tts_gating(req.engine)
     _check_real_mode_violation(req.text, req.voice_id)
-    _check_fish_consent(req.engine, req.voice_id)
 
     try:
         wav_bytes, sample_rate = _synthesize_wav_in_process(req.engine, req.text, req.voice_id)
         from app.audio.pipeline import AudioPipeline
         pipeline = AudioPipeline()
-        wav_bytes, sample_rate = pipeline.process_wav_bytes(wav_bytes, sample_rate)
+        wav_bytes, sample_rate = pipeline.process_wav_bytes(wav_bytes, sample_rate, profile=req.profile)
     except HTTPException as e:
         raise e
     except ImportError as e:
@@ -377,7 +359,6 @@ async def post_v1_tts(
     engine = req.engine or "kokoro"
     _check_f5_tts_gating(engine)
     _check_real_mode_violation(req.text, req.voice_id)
-    _check_fish_consent(engine, req.voice_id)
 
     t_start = time.time()
     sanitized_text_val = sanitize_text(req.text)
@@ -418,8 +399,11 @@ async def post_v1_tts(
         encoded_data = cached_data
         try:
             metadata = cache_manager.get_metadata(sanitized_text_val, req.voice_id, req.format, engine=engine, encoder_settings=req.profile)
-            if metadata and "duration_ms" in metadata:
-                duration_ms = metadata["duration_ms"]
+            if metadata:
+                if "duration_ms" in metadata:
+                    duration_ms = metadata["duration_ms"]
+                if "sample_rate" in metadata:
+                    sample_rate = metadata["sample_rate"]
             else:
                 duration_ms = get_audio_duration_ms(encoded_data, req.format)
         except Exception:
@@ -448,6 +432,12 @@ async def post_v1_tts(
                 raise HTTPException(status_code=503, detail=f"TTS service synthesis failure: {str(e)}")
                 
         tts_ms = (time.time() - t_tts_start) * 1000.0
+        
+        # Audio post processing pipeline
+        from app.audio.pipeline import AudioPipeline
+        pipeline = AudioPipeline()
+        wav_bytes, sample_rate = pipeline.process_wav_bytes(wav_bytes, sample_rate, profile=req.profile)
+        
         duration_ms = get_audio_duration_ms(wav_bytes, "wav")
         
         # Encode audio
@@ -478,6 +468,7 @@ async def post_v1_tts(
                 req.format,
                 encoded_data,
                 duration_ms=duration_ms,
+                sample_rate=sample_rate,
                 engine=engine,
                 encoder_settings=req.profile
             )

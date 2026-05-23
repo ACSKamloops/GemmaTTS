@@ -14,7 +14,7 @@ def setup_test_environment():
     settings.max_file_size_bytes = 100 * 1024 # 100 KB test limit
     settings.secret_key = "test-secret-key-for-hmac-verification-operations"
     settings.mode = "test"
-    settings.unified = False
+    settings.unified = True
     settings.debug_enabled = True
     
     if test_cache_dir.exists():

@@ -21,3 +21,13 @@
    * Invoked the `browser` subagent to load `http://127.0.0.1:8000/dashboard/`.
    * Verified that the services are reported healthy, performed a successful preview synthesis test in 16.9ms, and verified the audio player is displayed and the job logged as "done".
    * Captured and saved the successful run screenshot to the conversation artifacts directory.
+6. **P0 Consistency Fixes**:
+   * **TTS Provider Caching**: Refactored `get_worker()` in `app/services/tts_service.py` and `_synthesize_wav_in_process()` in `app/api/tts.py` to route through the central cached `get_tts_provider()` orchestrator method, preventing redundant model instantiation.
+   * **Schema Consolidation**: Removed `OutputConfig.format` field, making `req.tts.format` the unified format source of truth for `/v1/dialogue`.
+   * **Audio Profile & Metadata Cache**: Configured audio pipelines to accept custom profiles and update `AudioCacheManager.put()` to store `sample_rate`, `engine`, `format`, `profile`, and `audio_pipeline_version` sidecar metadata, recovering `sample_rate` on cache hits.
+   * **Fish API Removal**: Fully purged `_check_fish_consent` dead code from API controllers.
+   * **Smoke Test skips and RUN_REAL_SMOKE Gating**: Set smoke tests to skip gracefully unless `RUN_REAL_SMOKE=1` is set, in which case they fail hard. Removed Chatterbox model config path dependency.
+   * **Opt-in F5-TTS**: Configured script downloads to bypass F5-TTS assets by default, and gated benchmarks behind `settings.enable_f5_tts`.
+   * **Unified Mode Defaults**: Gated simulation text triggers to test environments only (`MODE=test`) and set unified settings to default true.
+   * **Verification**: Verified via `grep` check constraints and confirmed all 242 fast tests are passing successfully.
+

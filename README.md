@@ -19,10 +19,10 @@ User/application request
 
 | Engine | Model | Quality | Speed | Verification State | Use Case / Notes |
 |--------|-------|---------|-------|-------------------|------------------|
-| **Chatterbox** | Resemble AI 0.5B | ★★★★★ | Medium | **Default / Verified** | Voice cloning, emotion control |
-| **Kokoro** | 82M ONNX | ★★★★ | Fast | **Verified** | Many voices, low latency |
-| **Piper** | Lessac Medium | ★★★ | Fastest | **Verified** | Always works, low resource |
-| **Dia** | Nari Labs 1.6B | ★★★★★ | Slow | **Experimental** | Multi-speaker dialogue ([S1]/[S2]) |
+| **Chatterbox** | Resemble AI 0.5B | ★★★★★ | Medium | **Default / Smoke-test available** | Voice cloning, emotion control |
+| **Kokoro** | 82M ONNX | ★★★★ | Fast | **Smoke-test available** | Many voices, low latency |
+| **Piper** | Lessac Medium | ★★★ | Fastest | **Smoke-test available** | Always works, low resource |
+| **Dia** | Nari Labs 1.6B | ★★★★★ | Slow | **Smoke-test available** | Multi-speaker dialogue ([S1]/[S2]) |
 | **F5-TTS** | SWivid 1.2B | ★★★★ | Medium | **Experimental** | Voice cloning. Disabled by default due to non-commercial license (enable with `ENABLE_F5_TTS=true`) |
 
 ## Requirements
@@ -65,7 +65,7 @@ The single-process server exposes all endpoints unified under port 8000:
 - `POST /v1/dialogue` — Generate text + speech synthesis (unified pipeline)
 - `POST /v1/tts` — Speech synthesis with selectable engine and cache lookup
 - `POST /synthesize` — Direct in-process speech synthesis
-- `POST /synthesize/pcm` — Raw PCM s16le audio stream endpoint
+- `POST /synthesize/stream` — Raw PCM s16le audio stream endpoint
 - `POST /synthesize/export` — File download export (WAV/OGG/MP3)
 - `GET /audio/{signed_id}` — Retrieve cached audio (HMAC-signed URL verification)
 - `POST /generate` — Text generation via Gemma 4 E4B-it
