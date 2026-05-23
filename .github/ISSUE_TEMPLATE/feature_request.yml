@@ -1,0 +1,29 @@
+name: Feature request
+description: Request a feature for the generic Gemma+TTS stack
+title: "FEAT: "
+labels: ["type:feature"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - LLM
+        - TTS
+        - Audio
+        - API
+        - UI
+        - Security
+        - Docs

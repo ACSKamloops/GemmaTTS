@@ -1,0 +1,43 @@
+title,milestone,labels,body_file,phase
+"EPIC: M0 Requirements, Benchmarks & Risk Gates","M0 Requirements, Benchmarks & Risk Gates","type:epic,phase:m0",issue-bodies/epic-m0-requirements-benchmarks-risk-gates.md,M0
+EPIC: M1 Core Inference Service,M1 Core Inference Service,"type:epic,phase:m1",issue-bodies/epic-m1-core-inference-service.md,M1
+EPIC: M2 TTS Pipeline,M2 TTS Pipeline,"type:epic,phase:m2",issue-bodies/epic-m2-tts-pipeline.md,M2
+EPIC: M3 Audio Outputs & Transport,M3 Audio Outputs & Transport,"type:epic,phase:m3",issue-bodies/epic-m3-audio-outputs-transport.md,M3
+EPIC: M4 App Adapters,M4 App Adapters,"type:epic,phase:m4",issue-bodies/epic-m4-app-adapters.md,M4
+"EPIC: M5 UI, Metrics & Observability","M5 UI, Metrics & Observability","type:epic,phase:m5",issue-bodies/epic-m5-ui-metrics-observability.md,M5
+"EPIC: M6 Security, Abuse Resistance & Privacy","M6 Security, Abuse Resistance & Privacy","type:epic,phase:m6",issue-bodies/epic-m6-security-abuse-resistance-privacy.md,M6
+"EPIC: M7 Packaging, Docs & Release","M7 Packaging, Docs & Release","type:epic,phase:m7",issue-bodies/epic-m7-packaging-docs-release.md,M7
+Define generic Gemma+TTS use cases and non-goals,"M0 Requirements, Benchmarks & Risk Gates","phase:m0,area:architecture,priority:p0",issue-bodies/define-generic-gemma-tts-use-cases-and-non-goals.md,M0
+Benchmark Gemma E2B/E4B through llama.cpp server,"M0 Requirements, Benchmarks & Risk Gates","phase:m0,area:llm,type:research,risk:performance,priority:p0",issue-bodies/benchmark-gemma-e2b-e4b-through-llama-cpp-server.md,M0
+"Benchmark Kokoro, Piper, and optional KittenTTS","M0 Requirements, Benchmarks & Risk Gates","phase:m0,area:tts,type:research,risk:performance,priority:p0",issue-bodies/benchmark-kokoro-piper-and-optional-kittentts.md,M0
+Write SECURITY_MODEL.md,"M0 Requirements, Benchmarks & Risk Gates","phase:m0,area:security,risk:security,priority:p0",issue-bodies/write-security-model-md.md,M0
+Choose default architecture: Python FastAPI orchestrator + llama.cpp + Kokoro,"M0 Requirements, Benchmarks & Risk Gates","phase:m0,area:architecture,priority:p1",issue-bodies/choose-default-architecture-python-fastapi-orchestrator-llama-cpp-kokoro.md,M0
+Scaffold Python service with typed config and health endpoints,M1 Core Inference Service,"phase:m1,area:backend,priority:p0",issue-bodies/scaffold-python-service-with-typed-config-and-health-endpoints.md,M1
+Implement llama.cpp OpenAI-compatible client,M1 Core Inference Service,"phase:m1,area:llm,priority:p0",issue-bodies/implement-llama-cpp-openai-compatible-client.md,M1
+Implement dialogue/text job queue,M1 Core Inference Service,"phase:m1,area:backend,priority:p0",issue-bodies/implement-dialogue-text-job-queue.md,M1
+Implement prompt builder with schema-constrained outputs,M1 Core Inference Service,"phase:m1,area:llm,area:security,priority:p1",issue-bodies/implement-prompt-builder-with-schema-constrained-outputs.md,M1
+Implement text normalization and TTS safety preprocessor,M1 Core Inference Service,"phase:m1,area:tts,area:security,priority:p1",issue-bodies/implement-text-normalization-and-tts-safety-preprocessor.md,M1
+Implement Kokoro primary TTS worker,M2 TTS Pipeline,"phase:m2,area:tts,priority:p0",issue-bodies/implement-kokoro-primary-tts-worker.md,M2
+Implement Piper persistent fallback worker,M2 TTS Pipeline,"phase:m2,area:tts,priority:p1",issue-bodies/implement-piper-persistent-fallback-worker.md,M2
+Create voice registry and preview metadata,M2 TTS Pipeline,"phase:m2,area:tts,area:ui,priority:p1",issue-bodies/create-voice-registry-and-preview-metadata.md,M2
+"Implement audio normalization, encoding, and cache",M2 TTS Pipeline,"phase:m2,area:audio,priority:p0",issue-bodies/implement-audio-normalization-encoding-and-cache.md,M2
+Implement sentence chunking for long text,M2 TTS Pipeline,"phase:m2,area:tts,priority:p2",issue-bodies/implement-sentence-chunking-for-long-text.md,M2
+Implement signed audio asset endpoint,M3 Audio Outputs & Transport,"phase:m3,area:audio,area:security,priority:p0",issue-bodies/implement-signed-audio-asset-endpoint.md,M3
+Implement local speaker playback adapter,M3 Audio Outputs & Transport,"phase:m3,area:audio,priority:p1",issue-bodies/implement-local-speaker-playback-adapter.md,M3
+Implement PCM streaming endpoint,M3 Audio Outputs & Transport,"phase:m3,area:audio,priority:p1",issue-bodies/implement-pcm-streaming-endpoint.md,M3
+Implement file export API,M3 Audio Outputs & Transport,"phase:m3,area:audio,priority:p2",issue-bodies/implement-file-export-api.md,M3
+Build CLI adapter,M4 App Adapters,"phase:m4,area:backend,priority:p1",issue-bodies/build-cli-adapter.md,M4
+Build generic HTTP API adapter,M4 App Adapters,"phase:m4,area:backend,priority:p0",issue-bodies/build-generic-http-api-adapter.md,M4
+Build desktop assistant adapter skeleton,M4 App Adapters,"phase:m4,area:audio,priority:p2",issue-bodies/build-desktop-assistant-adapter-skeleton.md,M4
+Build generic game/NPC adapter contract,M4 App Adapters,"phase:m4,area:architecture,priority:p2",issue-bodies/build-generic-game-npc-adapter-contract.md,M4
+Create minimal web dashboard,"M5 UI, Metrics & Observability","phase:m5,area:ui,priority:p2",issue-bodies/create-minimal-web-dashboard.md,M5
+Add metrics and structured logs,"M5 UI, Metrics & Observability","phase:m5,area:backend,priority:p1",issue-bodies/add-metrics-and-structured-logs.md,M5
+Add voice preview UI,"M5 UI, Metrics & Observability","phase:m5,area:ui,area:tts,priority:p3",issue-bodies/add-voice-preview-ui.md,M5
+Implement API auth modes,"M6 Security, Abuse Resistance & Privacy","phase:m6,area:security,priority:p1",issue-bodies/implement-api-auth-modes.md,M6
+Add prompt-injection regression tests,"M6 Security, Abuse Resistance & Privacy","phase:m6,area:security,type:test,priority:p1",issue-bodies/add-prompt-injection-regression-tests.md,M6
+Add filesystem abuse tests,"M6 Security, Abuse Resistance & Privacy","phase:m6,area:security,type:test,priority:p0",issue-bodies/add-filesystem-abuse-tests.md,M6
+Add rate limits and queue backpressure,"M6 Security, Abuse Resistance & Privacy","phase:m6,area:security,risk:performance,priority:p1",issue-bodies/add-rate-limits-and-queue-backpressure.md,M6
+Create Docker Compose for service stack,"M7 Packaging, Docs & Release","phase:m7,area:docs,priority:p1",issue-bodies/create-docker-compose-for-service-stack.md,M7
+Create setup docs for Windows and Linux,"M7 Packaging, Docs & Release","phase:m7,area:docs,priority:p0",issue-bodies/create-setup-docs-for-windows-and-linux.md,M7
+Create CI workflows,"M7 Packaging, Docs & Release","phase:m7,area:tests,priority:p1",issue-bodies/create-ci-workflows.md,M7
+Create release checklist,"M7 Packaging, Docs & Release","phase:m7,area:docs,priority:p2",issue-bodies/create-release-checklist.md,M7

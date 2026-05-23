@@ -1,0 +1,16 @@
+name: Benchmark Smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  benchmark-smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Explain benchmark separation
+        run: |
+          echo "Real Gemma/Kokoro benchmarks require local model files and target hardware."
+          echo "Keep model benchmarks manual or self-hosted-runner only."

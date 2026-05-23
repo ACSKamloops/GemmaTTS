@@ -1,0 +1,629 @@
+{
+  "repo": "ACSKamloops/GemmaTTS",
+  "project_title": "Generic Gemma + TTS Roadmap",
+  "milestones": [
+    [
+      "M0 Requirements, Benchmarks & Risk Gates",
+      "Define use cases, verify model/resource assumptions, and establish safety boundaries."
+    ],
+    [
+      "M1 Core Inference Service",
+      "Build the service shell, local LLM integration, request/job model, and response contracts."
+    ],
+    [
+      "M2 TTS Pipeline",
+      "Implement Kokoro primary TTS, Piper fallback, voice registry, normalization, encoding, and cache."
+    ],
+    [
+      "M3 Audio Outputs & Transport",
+      "Support file, HTTP, local speaker, PCM streaming, and generic client playback integrations."
+    ],
+    [
+      "M4 App Adapters",
+      "Create adapters for CLI, desktop apps, game/NPC systems, batch narration, and external APIs."
+    ],
+    [
+      "M5 UI, Metrics & Observability",
+      "Dashboard, job history, voice preview, latency/resource metrics, and logs."
+    ],
+    [
+      "M6 Security, Abuse Resistance & Privacy",
+      "Input/output safety, auth, rate limits, signed audio IDs, filesystem protections, and retention policy."
+    ],
+    [
+      "M7 Packaging, Docs & Release",
+      "Docker, setup guides, model download docs, cross-platform scripts, release process."
+    ]
+  ],
+  "labels": [
+    [
+      "phase:m0",
+      "0E8A16"
+    ],
+    [
+      "phase:m1",
+      "1D76DB"
+    ],
+    [
+      "phase:m2",
+      "5319E7"
+    ],
+    [
+      "phase:m3",
+      "D93F0B"
+    ],
+    [
+      "phase:m4",
+      "FBCA04"
+    ],
+    [
+      "phase:m5",
+      "B60205"
+    ],
+    [
+      "phase:m6",
+      "B60205"
+    ],
+    [
+      "phase:m7",
+      "6F42C1"
+    ],
+    [
+      "area:architecture",
+      "0052CC"
+    ],
+    [
+      "area:backend",
+      "0052CC"
+    ],
+    [
+      "area:tts",
+      "5319E7"
+    ],
+    [
+      "area:llm",
+      "1D76DB"
+    ],
+    [
+      "area:audio",
+      "D93F0B"
+    ],
+    [
+      "area:ui",
+      "0E8A16"
+    ],
+    [
+      "area:security",
+      "B60205"
+    ],
+    [
+      "area:tests",
+      "5319E7"
+    ],
+    [
+      "area:docs",
+      "6F42C1"
+    ],
+    [
+      "risk:blocker",
+      "B60205"
+    ],
+    [
+      "risk:platform",
+      "D93F0B"
+    ],
+    [
+      "risk:performance",
+      "FBCA04"
+    ],
+    [
+      "risk:security",
+      "B60205"
+    ],
+    [
+      "priority:p0",
+      "B60205"
+    ],
+    [
+      "priority:p1",
+      "D93F0B"
+    ],
+    [
+      "priority:p2",
+      "FBCA04"
+    ],
+    [
+      "priority:p3",
+      "0E8A16"
+    ],
+    [
+      "type:epic",
+      "5319E7"
+    ],
+    [
+      "type:feature",
+      "1D76DB"
+    ],
+    [
+      "type:research",
+      "FBCA04"
+    ],
+    [
+      "type:test",
+      "0E8A16"
+    ],
+    [
+      "type:docs",
+      "6F42C1"
+    ]
+  ],
+  "issues": [
+    {
+      "title": "EPIC: M0 Requirements, Benchmarks & Risk Gates",
+      "milestone": "M0 Requirements, Benchmarks & Risk Gates",
+      "labels": [
+        "type:epic",
+        "phase:m0"
+      ],
+      "body_file": "issue-bodies/epic-m0-requirements-benchmarks-risk-gates.md",
+      "phase": "M0"
+    },
+    {
+      "title": "EPIC: M1 Core Inference Service",
+      "milestone": "M1 Core Inference Service",
+      "labels": [
+        "type:epic",
+        "phase:m1"
+      ],
+      "body_file": "issue-bodies/epic-m1-core-inference-service.md",
+      "phase": "M1"
+    },
+    {
+      "title": "EPIC: M2 TTS Pipeline",
+      "milestone": "M2 TTS Pipeline",
+      "labels": [
+        "type:epic",
+        "phase:m2"
+      ],
+      "body_file": "issue-bodies/epic-m2-tts-pipeline.md",
+      "phase": "M2"
+    },
+    {
+      "title": "EPIC: M3 Audio Outputs & Transport",
+      "milestone": "M3 Audio Outputs & Transport",
+      "labels": [
+        "type:epic",
+        "phase:m3"
+      ],
+      "body_file": "issue-bodies/epic-m3-audio-outputs-transport.md",
+      "phase": "M3"
+    },
+    {
+      "title": "EPIC: M4 App Adapters",
+      "milestone": "M4 App Adapters",
+      "labels": [
+        "type:epic",
+        "phase:m4"
+      ],
+      "body_file": "issue-bodies/epic-m4-app-adapters.md",
+      "phase": "M4"
+    },
+    {
+      "title": "EPIC: M5 UI, Metrics & Observability",
+      "milestone": "M5 UI, Metrics & Observability",
+      "labels": [
+        "type:epic",
+        "phase:m5"
+      ],
+      "body_file": "issue-bodies/epic-m5-ui-metrics-observability.md",
+      "phase": "M5"
+    },
+    {
+      "title": "EPIC: M6 Security, Abuse Resistance & Privacy",
+      "milestone": "M6 Security, Abuse Resistance & Privacy",
+      "labels": [
+        "type:epic",
+        "phase:m6"
+      ],
+      "body_file": "issue-bodies/epic-m6-security-abuse-resistance-privacy.md",
+      "phase": "M6"
+    },
+    {
+      "title": "EPIC: M7 Packaging, Docs & Release",
+      "milestone": "M7 Packaging, Docs & Release",
+      "labels": [
+        "type:epic",
+        "phase:m7"
+      ],
+      "body_file": "issue-bodies/epic-m7-packaging-docs-release.md",
+      "phase": "M7"
+    },
+    {
+      "title": "Define generic Gemma+TTS use cases and non-goals",
+      "milestone": "M0 Requirements, Benchmarks & Risk Gates",
+      "labels": [
+        "phase:m0",
+        "area:architecture",
+        "priority:p0"
+      ],
+      "body_file": "issue-bodies/define-generic-gemma-tts-use-cases-and-non-goals.md",
+      "phase": "M0"
+    },
+    {
+      "title": "Benchmark Gemma E2B/E4B through llama.cpp server",
+      "milestone": "M0 Requirements, Benchmarks & Risk Gates",
+      "labels": [
+        "phase:m0",
+        "area:llm",
+        "type:research",
+        "risk:performance",
+        "priority:p0"
+      ],
+      "body_file": "issue-bodies/benchmark-gemma-e2b-e4b-through-llama-cpp-server.md",
+      "phase": "M0"
+    },
+    {
+      "title": "Benchmark Kokoro, Piper, and optional KittenTTS",
+      "milestone": "M0 Requirements, Benchmarks & Risk Gates",
+      "labels": [
+        "phase:m0",
+        "area:tts",
+        "type:research",
+        "risk:performance",
+        "priority:p0"
+      ],
+      "body_file": "issue-bodies/benchmark-kokoro-piper-and-optional-kittentts.md",
+      "phase": "M0"
+    },
+    {
+      "title": "Write SECURITY_MODEL.md",
+      "milestone": "M0 Requirements, Benchmarks & Risk Gates",
+      "labels": [
+        "phase:m0",
+        "area:security",
+        "risk:security",
+        "priority:p0"
+      ],
+      "body_file": "issue-bodies/write-security-model-md.md",
+      "phase": "M0"
+    },
+    {
+      "title": "Choose default architecture: Python FastAPI orchestrator + llama.cpp + Kokoro",
+      "milestone": "M0 Requirements, Benchmarks & Risk Gates",
+      "labels": [
+        "phase:m0",
+        "area:architecture",
+        "priority:p1"
+      ],
+      "body_file": "issue-bodies/choose-default-architecture-python-fastapi-orchestrator-llama-cpp-kokoro.md",
+      "phase": "M0"
+    },
+    {
+      "title": "Scaffold Python service with typed config and health endpoints",
+      "milestone": "M1 Core Inference Service",
+      "labels": [
+        "phase:m1",
+        "area:backend",
+        "priority:p0"
+      ],
+      "body_file": "issue-bodies/scaffold-python-service-with-typed-config-and-health-endpoints.md",
+      "phase": "M1"
+    },
+    {
+      "title": "Implement llama.cpp OpenAI-compatible client",
+      "milestone": "M1 Core Inference Service",
+      "labels": [
+        "phase:m1",
+        "area:llm",
+        "priority:p0"
+      ],
+      "body_file": "issue-bodies/implement-llama-cpp-openai-compatible-client.md",
+      "phase": "M1"
+    },
+    {
+      "title": "Implement dialogue/text job queue",
+      "milestone": "M1 Core Inference Service",
+      "labels": [
+        "phase:m1",
+        "area:backend",
+        "priority:p0"
+      ],
+      "body_file": "issue-bodies/implement-dialogue-text-job-queue.md",
+      "phase": "M1"
+    },
+    {
+      "title": "Implement prompt builder with schema-constrained outputs",
+      "milestone": "M1 Core Inference Service",
+      "labels": [
+        "phase:m1",
+        "area:llm",
+        "area:security",
+        "priority:p1"
+      ],
+      "body_file": "issue-bodies/implement-prompt-builder-with-schema-constrained-outputs.md",
+      "phase": "M1"
+    },
+    {
+      "title": "Implement text normalization and TTS safety preprocessor",
+      "milestone": "M1 Core Inference Service",
+      "labels": [
+        "phase:m1",
+        "area:tts",
+        "area:security",
+        "priority:p1"
+      ],
+      "body_file": "issue-bodies/implement-text-normalization-and-tts-safety-preprocessor.md",
+      "phase": "M1"
+    },
+    {
+      "title": "Implement Kokoro primary TTS worker",
+      "milestone": "M2 TTS Pipeline",
+      "labels": [
+        "phase:m2",
+        "area:tts",
+        "priority:p0"
+      ],
+      "body_file": "issue-bodies/implement-kokoro-primary-tts-worker.md",
+      "phase": "M2"
+    },
+    {
+      "title": "Implement Piper persistent fallback worker",
+      "milestone": "M2 TTS Pipeline",
+      "labels": [
+        "phase:m2",
+        "area:tts",
+        "priority:p1"
+      ],
+      "body_file": "issue-bodies/implement-piper-persistent-fallback-worker.md",
+      "phase": "M2"
+    },
+    {
+      "title": "Create voice registry and preview metadata",
+      "milestone": "M2 TTS Pipeline",
+      "labels": [
+        "phase:m2",
+        "area:tts",
+        "area:ui",
+        "priority:p1"
+      ],
+      "body_file": "issue-bodies/create-voice-registry-and-preview-metadata.md",
+      "phase": "M2"
+    },
+    {
+      "title": "Implement audio normalization, encoding, and cache",
+      "milestone": "M2 TTS Pipeline",
+      "labels": [
+        "phase:m2",
+        "area:audio",
+        "priority:p0"
+      ],
+      "body_file": "issue-bodies/implement-audio-normalization-encoding-and-cache.md",
+      "phase": "M2"
+    },
+    {
+      "title": "Implement sentence chunking for long text",
+      "milestone": "M2 TTS Pipeline",
+      "labels": [
+        "phase:m2",
+        "area:tts",
+        "priority:p2"
+      ],
+      "body_file": "issue-bodies/implement-sentence-chunking-for-long-text.md",
+      "phase": "M2"
+    },
+    {
+      "title": "Implement signed audio asset endpoint",
+      "milestone": "M3 Audio Outputs & Transport",
+      "labels": [
+        "phase:m3",
+        "area:audio",
+        "area:security",
+        "priority:p0"
+      ],
+      "body_file": "issue-bodies/implement-signed-audio-asset-endpoint.md",
+      "phase": "M3"
+    },
+    {
+      "title": "Implement local speaker playback adapter",
+      "milestone": "M3 Audio Outputs & Transport",
+      "labels": [
+        "phase:m3",
+        "area:audio",
+        "priority:p1"
+      ],
+      "body_file": "issue-bodies/implement-local-speaker-playback-adapter.md",
+      "phase": "M3"
+    },
+    {
+      "title": "Implement PCM streaming endpoint",
+      "milestone": "M3 Audio Outputs & Transport",
+      "labels": [
+        "phase:m3",
+        "area:audio",
+        "priority:p1"
+      ],
+      "body_file": "issue-bodies/implement-pcm-streaming-endpoint.md",
+      "phase": "M3"
+    },
+    {
+      "title": "Implement file export API",
+      "milestone": "M3 Audio Outputs & Transport",
+      "labels": [
+        "phase:m3",
+        "area:audio",
+        "priority:p2"
+      ],
+      "body_file": "issue-bodies/implement-file-export-api.md",
+      "phase": "M3"
+    },
+    {
+      "title": "Build CLI adapter",
+      "milestone": "M4 App Adapters",
+      "labels": [
+        "phase:m4",
+        "area:backend",
+        "priority:p1"
+      ],
+      "body_file": "issue-bodies/build-cli-adapter.md",
+      "phase": "M4"
+    },
+    {
+      "title": "Build generic HTTP API adapter",
+      "milestone": "M4 App Adapters",
+      "labels": [
+        "phase:m4",
+        "area:backend",
+        "priority:p0"
+      ],
+      "body_file": "issue-bodies/build-generic-http-api-adapter.md",
+      "phase": "M4"
+    },
+    {
+      "title": "Build desktop assistant adapter skeleton",
+      "milestone": "M4 App Adapters",
+      "labels": [
+        "phase:m4",
+        "area:audio",
+        "priority:p2"
+      ],
+      "body_file": "issue-bodies/build-desktop-assistant-adapter-skeleton.md",
+      "phase": "M4"
+    },
+    {
+      "title": "Build generic game/NPC adapter contract",
+      "milestone": "M4 App Adapters",
+      "labels": [
+        "phase:m4",
+        "area:architecture",
+        "priority:p2"
+      ],
+      "body_file": "issue-bodies/build-generic-game-npc-adapter-contract.md",
+      "phase": "M4"
+    },
+    {
+      "title": "Create minimal web dashboard",
+      "milestone": "M5 UI, Metrics & Observability",
+      "labels": [
+        "phase:m5",
+        "area:ui",
+        "priority:p2"
+      ],
+      "body_file": "issue-bodies/create-minimal-web-dashboard.md",
+      "phase": "M5"
+    },
+    {
+      "title": "Add metrics and structured logs",
+      "milestone": "M5 UI, Metrics & Observability",
+      "labels": [
+        "phase:m5",
+        "area:backend",
+        "priority:p1"
+      ],
+      "body_file": "issue-bodies/add-metrics-and-structured-logs.md",
+      "phase": "M5"
+    },
+    {
+      "title": "Add voice preview UI",
+      "milestone": "M5 UI, Metrics & Observability",
+      "labels": [
+        "phase:m5",
+        "area:ui",
+        "area:tts",
+        "priority:p3"
+      ],
+      "body_file": "issue-bodies/add-voice-preview-ui.md",
+      "phase": "M5"
+    },
+    {
+      "title": "Implement API auth modes",
+      "milestone": "M6 Security, Abuse Resistance & Privacy",
+      "labels": [
+        "phase:m6",
+        "area:security",
+        "priority:p1"
+      ],
+      "body_file": "issue-bodies/implement-api-auth-modes.md",
+      "phase": "M6"
+    },
+    {
+      "title": "Add prompt-injection regression tests",
+      "milestone": "M6 Security, Abuse Resistance & Privacy",
+      "labels": [
+        "phase:m6",
+        "area:security",
+        "type:test",
+        "priority:p1"
+      ],
+      "body_file": "issue-bodies/add-prompt-injection-regression-tests.md",
+      "phase": "M6"
+    },
+    {
+      "title": "Add filesystem abuse tests",
+      "milestone": "M6 Security, Abuse Resistance & Privacy",
+      "labels": [
+        "phase:m6",
+        "area:security",
+        "type:test",
+        "priority:p0"
+      ],
+      "body_file": "issue-bodies/add-filesystem-abuse-tests.md",
+      "phase": "M6"
+    },
+    {
+      "title": "Add rate limits and queue backpressure",
+      "milestone": "M6 Security, Abuse Resistance & Privacy",
+      "labels": [
+        "phase:m6",
+        "area:security",
+        "risk:performance",
+        "priority:p1"
+      ],
+      "body_file": "issue-bodies/add-rate-limits-and-queue-backpressure.md",
+      "phase": "M6"
+    },
+    {
+      "title": "Create Docker Compose for service stack",
+      "milestone": "M7 Packaging, Docs & Release",
+      "labels": [
+        "phase:m7",
+        "area:docs",
+        "priority:p1"
+      ],
+      "body_file": "issue-bodies/create-docker-compose-for-service-stack.md",
+      "phase": "M7"
+    },
+    {
+      "title": "Create setup docs for Windows and Linux",
+      "milestone": "M7 Packaging, Docs & Release",
+      "labels": [
+        "phase:m7",
+        "area:docs",
+        "priority:p0"
+      ],
+      "body_file": "issue-bodies/create-setup-docs-for-windows-and-linux.md",
+      "phase": "M7"
+    },
+    {
+      "title": "Create CI workflows",
+      "milestone": "M7 Packaging, Docs & Release",
+      "labels": [
+        "phase:m7",
+        "area:tests",
+        "priority:p1"
+      ],
+      "body_file": "issue-bodies/create-ci-workflows.md",
+      "phase": "M7"
+    },
+    {
+      "title": "Create release checklist",
+      "milestone": "M7 Packaging, Docs & Release",
+      "labels": [
+        "phase:m7",
+        "area:docs",
+        "priority:p2"
+      ],
+      "body_file": "issue-bodies/create-release-checklist.md",
+      "phase": "M7"
+    }
+  ]
+}
