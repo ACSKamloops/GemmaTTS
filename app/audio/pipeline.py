@@ -2,14 +2,16 @@ import numpy as np
 import io
 import soundfile as sf
 import logging
+from typing import Optional
 
 logger = logging.getLogger("audio-pipeline")
 
 class AudioPipeline:
-    def __init__(self, target_sample_rate: int = 24000, target_loudness: float = -23.0, max_peak: float = 0.95):
+    def __init__(self, target_sample_rate: int = 24000, target_loudness: float = -23.0, max_peak: float = 0.95, default_profile: str = "voice_agent_fast"):
         self.target_sample_rate = target_sample_rate
         self.target_loudness = target_loudness
         self.max_peak = max_peak
+        self.default_profile = default_profile
 
     def trim_silence(self, audio: np.ndarray, threshold: float = 0.001, margin_ms: int = 100) -> np.ndarray:
         """
@@ -78,68 +80,84 @@ class AudioPipeline:
             sign = np.sign(audio)
             abs_val = np.abs(audio)
             # Smoothly compress values between threshold and peak to threshold -> max_peak
-            # Form: y = threshold + (max_peak - threshold) * tanh((x - threshold) / (max_peak - threshold))
             scale = self.max_peak - threshold
             compressed = threshold + scale * np.tanh((abs_val - threshold) / scale)
             audio = np.where(mask, sign * compressed, audio)
             
-        # If the peak still exceeds max_peak (due to tanh approximation), scale slightly
+        # If the peak still exceeds max_peak, scale slightly
         new_peak = np.max(np.abs(audio))
         if new_peak > self.max_peak:
             audio = audio * (self.max_peak / new_peak)
             
         return audio
 
-    def match_sample_rate(self, audio: np.ndarray, current_sr: int) -> tuple[np.ndarray, int]:
+    def match_sample_rate(self, audio: np.ndarray, current_sr: int, target_sr: int) -> tuple[np.ndarray, int]:
         """
         Resamples audio to target sample rate using librosa.
         """
-        if current_sr == self.target_sample_rate:
+        if current_sr == target_sr:
             return audio, current_sr
 
         try:
             import librosa
-            # librosa.resample takes (y, orig_sr, target_sr, axis=0) where axis=0 is time dimension in (samples, channels)
-            resampled_audio = librosa.resample(audio, orig_sr=float(current_sr), target_sr=float(self.target_sample_rate), axis=0)
-            return resampled_audio, self.target_sample_rate
+            resampled_audio = librosa.resample(audio, orig_sr=float(current_sr), target_sr=float(target_sr), axis=0)
+            return resampled_audio, target_sr
         except Exception as e:
             logger.warning(f"Resampling failed: {e}")
             return audio, current_sr
 
-    def process(self, audio: np.ndarray, current_sr: int) -> tuple[np.ndarray, int]:
+    def process(self, audio: np.ndarray, current_sr: int, profile: Optional[str] = None) -> tuple[np.ndarray, int]:
         """
-        Runs the complete optimization pipeline:
-        1. Sample rate matching (Resampling)
-        2. Silence trimming
-        3. Loudness normalization
-        4. Clipping prevention
+        Runs the optimization pipeline based on the configured profile:
+        - voice_agent_fast: full suite (24kHz, trim, normalize, limit)
+        - game_npc_ogg: keep pauses (no trim), normalize, limit, resample to native/target
+        - high_quality_narration: no trim, no normalization, limit only, native/target sample rate
+        - raw_model_output: no processing at all
         """
-        # 0. Remove DC offset to prevent transient offsets from inflating peak amplitude
+        active_profile = profile or self.default_profile
+        
+        if active_profile == "raw_model_output":
+            return audio, current_sr
+
+        # Remove DC offset first
         if len(audio) > 0:
             audio = audio - np.mean(audio, axis=0)
 
-        # 1. Resample to target rate
-        audio, sr = self.match_sample_rate(audio, current_sr)
-        # 2. Trim leading/trailing silence
-        audio = self.trim_silence(audio)
-        # 3. Loudness normalization
-        audio = self.normalize_loudness(audio, sr)
-        # 4. Clipping prevention
-        audio = self.prevent_clipping(audio)
+        # Resampling sample rate target
+        target_sr = self.target_sample_rate
+        if active_profile == "game_npc_ogg":
+            # Prefer higher sample rate for games (44.1kHz or native)
+            target_sr = max(44100, current_sr)
+        elif active_profile == "high_quality_narration":
+            target_sr = current_sr # Keep native
+
+        audio, sr = self.match_sample_rate(audio, current_sr, target_sr)
+
+        # Silence trimming
+        if active_profile == "voice_agent_fast":
+            audio = self.trim_silence(audio)
+
+        # Loudness normalization
+        if active_profile in ("voice_agent_fast", "game_npc_ogg"):
+            audio = self.normalize_loudness(audio, sr)
+
+        # Clipping prevention
+        if active_profile in ("voice_agent_fast", "game_npc_ogg", "high_quality_narration"):
+            audio = self.prevent_clipping(audio)
+
         return audio, sr
 
-    def process_wav_bytes(self, wav_bytes: bytes, current_sr: int) -> tuple[bytes, int]:
+    def process_wav_bytes(self, wav_bytes: bytes, current_sr: int, profile: Optional[str] = None) -> tuple[bytes, int]:
         """
         Helper method to deserialize WAV bytes, process them through the pipeline, and serialize back.
         """
         try:
             audio, sr = sf.read(io.BytesIO(wav_bytes))
-            processed_audio, new_sr = self.process(audio, sr)
+            processed_audio, new_sr = self.process(audio, sr, profile)
             
             buffer = io.BytesIO()
             sf.write(buffer, processed_audio, new_sr, format="WAV", subtype="PCM_16")
             return buffer.getvalue(), new_sr
         except Exception as e:
             logger.error(f"Error processing WAV bytes: {e}")
-            # If any failure occurs, return the original bytes to avoid crashing
             return wav_bytes, current_sr

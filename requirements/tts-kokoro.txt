@@ -1,0 +1,2 @@
+kokoro-onnx>=0.5.0
+onnxruntime-gpu>=1.20.0

@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Literal
 import os
 import secrets
 
@@ -11,13 +11,20 @@ class Settings(BaseSettings):
     # API Server Config
     host: str = "127.0.0.1"
     port: int = 8000
+    
+    # Execution Mode
+    mode: Literal["dev", "test", "real"] = "dev"
+    unified: bool = True
 
     # LLM Settings
     gemma_model_path: str = "models/gemma"
     gemma_model_id: str = "google/gemma-4-E4B-it"
+    gemma_url: str = "http://127.0.0.1:8001"
 
     # TTS Settings (engine defaults)
     default_tts_engine: str = "kokoro"
+    tts_url: str = "http://127.0.0.1:8002"
+    voice_ref_dir: Path = Path("models/voices_ref").resolve()
 
     # Security & Signing
     secret_key: str = Field(default_factory=lambda: os.getenv("SECRET_KEY", secrets.token_hex(32)))
@@ -38,3 +45,4 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
 settings = Settings()
+

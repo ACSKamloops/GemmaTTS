@@ -11,6 +11,8 @@ def setup_test_environment():
     settings.max_cache_size_bytes = 1024 * 1024 # 1 MB test limit
     settings.max_file_size_bytes = 100 * 1024 # 100 KB test limit
     settings.secret_key = "test-secret-key-for-hmac-verification-operations"
+    settings.mode = "test"
+    settings.unified = False
     
     if test_cache_dir.exists():
         shutil.rmtree(test_cache_dir)

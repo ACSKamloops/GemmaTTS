@@ -28,6 +28,35 @@ logger = logging.getLogger(__name__)
 _MUTATION_METHODS = {"POST", "PUT", "DELETE", "PATCH"}
 
 
+import time
+import threading
+
+class NonceStore:
+    def __init__(self, expiry_seconds: int = 300):
+        self.nonces = {}
+        self.expiry_seconds = expiry_seconds
+        self.lock = threading.Lock()
+
+    def is_valid_and_add(self, nonce: str, timestamp: int) -> bool:
+        now = int(time.time())
+        # Check window
+        if abs(now - timestamp) > self.expiry_seconds:
+            return False
+            
+        with self.lock:
+            # Clean expired nonces
+            expired = [n for n, t in self.nonces.items() if now - t > self.expiry_seconds]
+            for n in expired:
+                del self.nonces[n]
+                
+            if nonce in self.nonces:
+                return False
+                
+            self.nonces[nonce] = timestamp
+            return True
+
+nonce_store = NonceStore()
+
 class AuthMiddleware(BaseHTTPMiddleware):
     """Starlette/FastAPI middleware that gates mutation endpoints behind auth."""
 
@@ -104,6 +133,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
             logger.error("AUTH_MODE=hmac but SECRET_KEY is not set")
             return self._unauthorized("Server authentication misconfigured")
 
+        # Require a strong SECRET_KEY outside test mode
+        if settings.mode == "real" and (not secret or len(secret) < 32):
+            logger.error("Encountered insecure/empty SECRET_KEY in real mode")
+            return self._unauthorized("Server authentication misconfigured")
+
         signature = request.headers.get("x-signature")
         if not signature:
             logger.warning(
@@ -114,18 +148,48 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 "Missing X-Signature header for HMAC authentication"
             )
 
+        timestamp_str = request.headers.get("x-timestamp")
+        nonce = request.headers.get("x-nonce")
+
+        # In real mode, enforce replay mitigation headers
+        if settings.mode == "real" and (not timestamp_str or not nonce):
+            logger.warning("Missing X-Timestamp or X-Nonce header in real mode")
+            return self._unauthorized("Missing X-Timestamp or X-Nonce header for replay mitigation")
+
         # Read body (will be cached by Starlette for downstream handlers)
         body = await request.body()
-        expected = hmac.new(
-            secret.encode(), body, hashlib.sha256
-        ).hexdigest()
 
-        if not hmac.compare_digest(signature, expected):
-            logger.warning(
-                "HMAC signature mismatch from %s",
-                request.client.host if request.client else "unknown",
-            )
-            return self._unauthorized("Invalid HMAC signature")
+        if timestamp_str and nonce:
+            try:
+                timestamp = int(timestamp_str)
+            except ValueError:
+                return self._unauthorized("Invalid X-Timestamp header")
+
+            # Verify signature with full replay context
+            body_hash = hashlib.sha256(body).hexdigest()
+            payload = f"{request.method}:{request.url.path}:{timestamp_str}:{nonce}:{body_hash}"
+            expected = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
+
+            if not hmac.compare_digest(signature, expected):
+                logger.warning("HMAC replay signature mismatch")
+                return self._unauthorized("Invalid HMAC signature")
+
+            # Validate timestamp window and unique nonce
+            if not nonce_store.is_valid_and_add(nonce, timestamp):
+                logger.warning("HMAC request replay detected or expired timestamp")
+                return self._unauthorized("Request expired or nonce already used")
+        else:
+            # Fallback simple body-only signature for backward compatibility in dev/test
+            expected = hmac.new(
+                secret.encode(), body, hashlib.sha256
+            ).hexdigest()
+
+            if not hmac.compare_digest(signature, expected):
+                logger.warning(
+                    "HMAC simple signature mismatch from %s",
+                    request.client.host if request.client else "unknown",
+                )
+                return self._unauthorized("Invalid HMAC signature")
 
         return await call_next(request)
 

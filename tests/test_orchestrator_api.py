@@ -172,7 +172,7 @@ def test_dialogue_corrupt_cache_recovery(mock_post, client):
     assert response1.json()["metrics"]["cache_hit"] is False
 
     # Get the cache file path and write all zeros to corrupt it
-    cache_key = get_cache_key(text, "af_heart", "wav")
+    cache_key = get_cache_key(text, "af_heart", "wav", engine="chatterbox")
     cache_manager = AudioCacheManager()
     path = cache_manager.get_file_path(cache_key, "wav")
     assert path.exists()

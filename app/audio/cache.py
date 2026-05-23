@@ -4,12 +4,34 @@ from pathlib import Path
 from typing import Optional
 from app.config import settings
 
-def get_cache_key(text: str, voice_id: str, format: str) -> str:
+def get_cache_key(
+    text: str,
+    voice_id: str,
+    format: str,
+    engine: str = "kokoro",
+    model_id: Optional[str] = None,
+    model_version: Optional[str] = None,
+    voice_ref_hash: Optional[str] = None,
+    speed: float = 1.0,
+    language: str = "en",
+    sample_rate: int = 24000,
+    codec: Optional[str] = None,
+    encoder_settings: Optional[str] = None,
+    audio_pipeline_version: str = "v1"
+) -> str:
     """
-    Generate a SHA-256 hash representing text, voice, and format.
+    Generate a SHA-256 hash representing all synthesis and pipeline parameters
+    to prevent cache collision and stale results.
     """
-    payload = f"{text}:{voice_id}:{format}"
+    import re
+    normalized_text = re.sub(r"\s+", " ", text).strip().lower()
+    payload = (
+        f"{normalized_text}:{voice_id}:{format}:{engine}:{model_id or ''}:"
+        f"{model_version or ''}:{voice_ref_hash or ''}:{speed}:{language}:{sample_rate}:"
+        f"{codec or ''}:{encoder_settings or ''}:{audio_pipeline_version}"
+    )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
 
 def is_safe_path(path: Path, base_dir: Path) -> bool:
     """
@@ -61,11 +83,11 @@ class AudioCacheManager:
             
         return path
         
-    def get(self, text: str, voice_id: str, format: str) -> Optional[bytes]:
+    def get(self, text: str, voice_id: str, format: str, **kwargs) -> Optional[bytes]:
         """
         Retrieves cached audio file if it exists and is valid.
         """
-        key = get_cache_key(text, voice_id, format)
+        key = get_cache_key(text, voice_id, format, **kwargs)
         try:
             path = self.get_file_path(key, format)
             if path.exists():
@@ -79,11 +101,11 @@ class AudioCacheManager:
             pass
         return None
         
-    def get_metadata(self, text: str, voice_id: str, format: str) -> Optional[dict]:
+    def get_metadata(self, text: str, voice_id: str, format: str, **kwargs) -> Optional[dict]:
         """
         Retrieves cached metadata associated with a cache key.
         """
-        key = get_cache_key(text, voice_id, format)
+        key = get_cache_key(text, voice_id, format, **kwargs)
         try:
             path = self.get_file_path(key, format)
             meta_path = path.with_suffix(path.suffix + ".json")
@@ -94,7 +116,7 @@ class AudioCacheManager:
             pass
         return None
 
-    def put(self, text: str, voice_id: str, format: str, data: bytes, duration_ms: Optional[int] = None) -> Path:
+    def put(self, text: str, voice_id: str, format: str, data: bytes, duration_ms: Optional[int] = None, **kwargs) -> Path:
         """
         Caches audio data, pruning old entries as needed and enforcing size limits.
         """
@@ -107,11 +129,13 @@ class AudioCacheManager:
         if len(data) > settings.max_file_size_bytes:
             raise ValueError(f"File size exceeds max_file_size_bytes ({settings.max_file_size_bytes}).")
             
-        key = get_cache_key(text, voice_id, format)
+        key = get_cache_key(text, voice_id, format, **kwargs)
         path = self.get_file_path(key, format)
         
         self.prune_cache(len(data))
         
+        import time
+        time.sleep(0.002)
         path.write_bytes(data)
 
         if duration_ms is not None:
