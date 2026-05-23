@@ -1,120 +1,85 @@
 # Architecture
 
-## Service layout
+## Service Topology
 
-```text
-gemma-tts/
-  app/
-    main.py
-    config.py
-    models.py
-    routes/
-      health.py
-      jobs.py
-      tts.py
-      audio.py
-      voices.py
-      websocket.py
-    services/
-      llm/
-        base.py
-        llama_cpp_client.py
-      tts/
-        base.py
-        kokoro_worker.py
-        piper_worker.py
-        kitten_worker.py
-      audio/
-        encoder.py
-        cache.py
-        signer.py
-        playback.py
-      safety/
-        prompt_builder.py
-        text_sanitizer.py
-        output_validator.py
-      queue/
-        job_store.py
-        worker_pool.py
-  tests/
-  docs/
+```
+┌──────────────────────────────────────────────────────┐
+│                Orchestrator API (:8000)                │
+│   POST /v1/dialogue  │  GET /audio/{signed_id}        │
+└─────────┬───────────────────────────┬────────────────┘
+          │                           │
+          ▼                           ▼
+┌─────────────────┐    ┌──────────────────────────────┐
+│ Gemma Service    │    │ TTS Service (:8002)           │
+│ (:8001)          │    │                              │
+│                  │    │  ┌─────────────────────────┐ │
+│ google/gemma-4-  │    │  │ Engine Router            │ │
+│ E4B-it (BF16)   │    │  │                         │ │
+│                  │    │  │  chatterbox → Chatterbox │ │
+│ Transformers     │    │  │  dia        → Dia 1.6B  │ │
+│ AutoModelFor-    │    │  │  kokoro     → Kokoro 82M│ │
+│ CausalLM        │    │  │  f5_tts     → F5-TTS    │ │
+│                  │    │  │  piper      → Piper     │ │
+│                  │    │  │  fish       → Fish (opt)│ │
+│                  │    │  └─────────────────────────┘ │
+└─────────────────┘    │                              │
+                       │  ┌─────────────────────────┐ │
+                       │  │ Audio Pipeline           │ │
+                       │  │  1. Resample → 24kHz     │ │
+                       │  │  2. DC offset removal    │ │
+                       │  │  3. Silence trim         │ │
+                       │  │  4. LUFS normalization   │ │
+                       │  │  5. Clipping prevention  │ │
+                       │  └─────────────────────────┘ │
+                       └──────────────────────────────┘
 ```
 
-## Request lifecycle
+## Model Details
 
-```text
-POST /v1/dialogue
-  -> validate request
-  -> build prompt
-  -> enqueue LLM job
-  -> call llama.cpp /v1/chat/completions
-  -> validate schema output
-  -> normalize spoken text
-  -> enqueue TTS job
-  -> synthesize with Kokoro or Piper
-  -> normalize/encode/cache audio
-  -> return job result
-```
+### LLM: Gemma 4 E4B-it
+- **Source**: `google/gemma-4-E4B-it` (HuggingFace, gated)
+- **Size**: ~16GB (safetensors)
+- **Precision**: BF16 on CUDA
+- **Runtime**: HuggingFace Transformers (`AutoModelForCausalLM`)
+- **Thinking**: Disabled (`enable_thinking=False`) for low-latency dialogue
 
-## Contracts
+### TTS: Chatterbox (Default)
+- **Source**: `chatterbox-tts` pip package (Resemble AI)
+- **API**: `ChatterboxTTS.from_pretrained(device="cuda")` → `model.generate(text)`
+- **Output**: 24kHz WAV
+- **Features**: Zero-shot voice cloning, emotion control, 23+ languages
+- **Weights**: Auto-downloaded by pip package
 
-### Dialogue request
+### TTS: Dia 1.6B (Dialogue)
+- **Source**: `nari-labs/Dia-1.6B-0626` (HuggingFace)
+- **API**: `DiaForConditionalGeneration` + `AutoProcessor` (transformers)
+- **Output**: 44100Hz WAV
+- **Features**: Multi-speaker dialogue with `[S1]`/`[S2]` tags, non-verbal cues
+- **Requires**: `descript-audio-codec` for audio decoding
 
-```json
-{
-  "request_id": "optional-client-id",
-  "speaker": {
-    "id": "npc_maria",
-    "name": "Maria",
-    "voice_id": "af_heart",
-    "style": "calm, direct"
-  },
-  "context": {
-    "location": "warehouse",
-    "facts": [
-      {"id": "door_locked", "can_reveal": true, "fact": "The west door is locked from inside."}
-    ]
-  },
-  "user_text": "What happened here?",
-  "max_words": 40,
-  "output": {
-    "audio": true,
-    "format": "ogg"
-  }
-}
-```
+### TTS: Kokoro 82M (Fast Fallback)
+- **Source**: `onnx-community/Kokoro-82M-ONNX` (HuggingFace)
+- **API**: `kokoro-onnx` pip package → `Kokoro.create(text, voice)`
+- **Output**: 24kHz WAV
+- **Features**: 60+ voice embeddings, voice blending, fast ONNX inference
 
-### Dialogue result
+### TTS: Piper (Emergency Fallback)
+- **Source**: `rhasspy/piper-voices` (HuggingFace)
+- **API**: `piper-tts` pip package → `PiperVoice.load()` → `synthesize()`
+- **Output**: 22050Hz WAV (resampled to 24kHz by pipeline)
 
-```json
-{
-  "job_id": "job_123",
-  "state": "ready",
-  "text": "Keep your voice down. The west door is locked from inside.",
-  "audio": {
-    "audio_id": "aud_abc",
-    "sha256": "hex",
-    "bytes": 84231,
-    "duration_ms": 4100,
-    "format": "ogg",
-    "sample_rate": 24000
-  },
-  "metrics": {
-    "queue_ms": 3,
-    "llm_ms": 1240,
-    "tts_ms": 480,
-    "encode_ms": 90,
-    "total_ms": 1813,
-    "cache_hit": false
-  }
-}
-```
+## Audio Pipeline
 
-## Security baseline
+All TTS output passes through `app/audio/pipeline.py`:
+1. **Resample** to 24kHz target via librosa
+2. **DC offset removal** — subtract mean to prevent transient bias
+3. **Silence trim** — amplitude threshold with safety margin
+4. **LUFS normalization** — EBU R128 to -23 LUFS via pyloudnorm
+5. **Clipping prevention** — soft-knee limiter + peak scaling
 
-- Do not expose the service beyond `127.0.0.1` unless explicitly configured.
-- Do not send arbitrary filesystem paths to clients.
-- Do not accept arbitrary URLs from clients for audio generation or playback.
-- Treat all user text as data, never instructions.
-- Validate schema output before TTS.
-- Limit max characters, max words, max audio seconds, max file size, queue depth, and cache size.
+## Security
+
+- **Input sanitization**: HTML, URLs, dot-traversal patterns stripped
+- **Path traversal protection**: Absolute path validation, symlink rejection
+- **HMAC-SHA256 signed URLs**: Audio files served with expiring signatures (5 min default)
+- **Rate limiting**: 40 req/sec per service

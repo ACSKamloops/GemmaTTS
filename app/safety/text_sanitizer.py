@@ -2,10 +2,10 @@ import re
 from app.config import settings
 
 # Regex to match markdown links [text](url) and extract text
-MARKDOWN_LINK_REGEX = re.compile(r'\[(.*?)\]\((?:https?|ftp|file)://[^\s/$.?#].[^\s]*\)')
+MARKDOWN_LINK_REGEX = re.compile(r'\[(.*?)\]\((?:https?|ftp|file)://[^\s()\[\]{}]+\)')
 
 # Regex to detect raw URLs
-RAW_URL_REGEX = re.compile(r'(?:https?|ftp|file)://[^\s/$.?#].[^\s]*')
+RAW_URL_REGEX = re.compile(r'(?:https?|ftp|file)://[^\s()\[\]{}]+')
 
 # Regex to detect HTML tags
 HTML_REGEX = re.compile(r'<[^>]*>')

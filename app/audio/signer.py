@@ -31,7 +31,7 @@ def verify_signed_audio_id(signed_id: str) -> Optional[str]:
     if not signed_id:
         return None
         
-    parts = signed_id.split(".")
+    parts = signed_id.rsplit(".", 2)
     if len(parts) != 3:
         return None
         

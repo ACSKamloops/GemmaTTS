@@ -143,3 +143,28 @@ cython_debug/
 # OS-specific
 .DS_Store
 Thumbs.db
+
+# =============================================================
+# Project-specific: Model weights, cloned libs, caches, scratch
+# =============================================================
+
+# Downloaded model weights (multi-GB, use scripts/download_models.py)
+models/
+
+# Cloned third-party library repos (installed via pip or git+)
+libs/dia_repo/
+
+# Audio cache (runtime generated)
+public/data/audio_cache/
+
+# Agents metadata
+.agents/
+
+# Scratch / one-off test scripts at project root only
+/test_*.py
+/test_output.*
+/output.log
+
+# Test process log files
+tests/*.log
+
