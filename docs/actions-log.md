@@ -30,4 +30,8 @@
    * **Opt-in F5-TTS**: Configured script downloads to bypass F5-TTS assets by default, and gated benchmarks behind `settings.enable_f5_tts`.
    * **Unified Mode Defaults**: Gated simulation text triggers to test environments only (`MODE=test`) and set unified settings to default true.
    * **Verification**: Verified via `grep` check constraints and confirmed all 242 fast tests are passing successfully.
-
+7. **Final Blocker Fixes**:
+   * **Simulation Trigger Gating**: Gated the `simulate_llm_bad_json` prompt trigger in `app/api/generate.py` behind `settings.mode == "test"`. In `dev` mode, it is treated as a normal prompt string, preventing accidental trigger bypasses.
+   * **Cache Key Sample Rate Consistency**: Removed the `sample_rate` parameter from the cache key payload in `get_cache_key()` (`app/audio/cache.py`). The sample rate is preserved and retrieved strictly from the sidecar metadata, preventing cache key mismatches when resampling profiles are used.
+   * **Unit Tests**: Added `tests/test_blocker_fixes.py` containing tests verifying gated simulation behavior in `dev`/`test` modes and cache key consistency when `sample_rate` differs.
+   * **Verification**: Verified that all 244 unit tests are passing successfully and regression greps pass.
