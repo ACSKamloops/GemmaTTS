@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GemmaTTS Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface-2: #222632;
+    --border: #2e3344;
+    --text: #e4e6ed;
+    --text-dim: #8b8fa3;
+    --accent: #6c8cff;
+    --green: #34d399;
+    --red: #f87171;
+    --yellow: #fbbf24;
+    --orange: #fb923c;
+    --radius: 10px;
+    --mono: 'Consolas', 'Monaco', 'Courier New', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; }
+  header h1 span { color: var(--accent); }
+  .header-meta { font-size: 0.8rem; color: var(--text-dim); font-family: var(--mono); }
+
+  /* ── Layout ── */
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .card h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+
+  /* ── Service rows ── */
+  .svc-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .svc-row:last-child { border-bottom: none; }
+  .svc-name { font-weight: 500; font-size: 0.95rem; }
+  .svc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-family: var(--mono);
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .svc-badge .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .badge-healthy { background: rgba(52,211,153,0.12); color: var(--green); }
+  .badge-healthy .dot { background: var(--green); }
+  .badge-unhealthy { background: rgba(248,113,113,0.12); color: var(--red); }
+  .badge-unhealthy .dot { background: var(--red); }
+  .badge-offline { background: rgba(248,113,113,0.12); color: var(--red); }
+  .badge-offline .dot { background: var(--red); }
+  .badge-timeout { background: rgba(251,191,36,0.12); color: var(--yellow); }
+  .badge-timeout .dot { background: var(--yellow); }
+  .badge-unknown { background: rgba(139,143,163,0.12); color: var(--text-dim); }
+  .badge-unknown .dot { background: var(--text-dim); }
+
+  /* ── Stats ── */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stat-item {}
+  .stat-val { font-size: 1.5rem; font-weight: 700; font-family: var(--mono); }
+  .stat-label { font-size: 0.75rem; color: var(--text-dim); margin-top: 2px; }
+
+  /* ── TTS Test ── */
+  .tts-section { margin-bottom: 24px; }
+  .form-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .form-row select,
+  .form-row input[type="text"] {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    outline: none;
+  }
+  .form-row input[type="text"] { flex: 1; min-width: 200px; }
+  .form-row select { min-width: 140px; }
+  .form-row select:focus,
+  .form-row input:focus { border-color: var(--accent); }
+
+  .btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  #preview-status {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-top: 6px;
+    min-height: 1.2em;
+  }
+  #preview-status.error { color: var(--red); }
+  #preview-status.success { color: var(--green); }
+
+  #audio-player { margin-top: 10px; width: 100%; display: none; }
+  #audio-player.visible { display: block; }
+
+  /* ── Job history ── */
+  .jobs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  .jobs-table th {
+    text-align: left;
+    padding: 8px 10px;
+    color: var(--text-dim);
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .jobs-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    color: var(--text);
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .jobs-table tr:last-child td { border-bottom: none; }
+  .status-done { color: var(--green); }
+  .status-error { color: var(--red); }
+  .status-pending { color: var(--yellow); }
+  .empty-msg { color: var(--text-dim); font-size: 0.85rem; padding: 20px 0; text-align: center; }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .container { padding: 12px; }
+    .grid-3 { grid-template-columns: 1fr; }
+    .form-row { flex-direction: column; }
+    .form-row select,
+    .form-row input[type="text"] { min-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>Gemma</span>TTS Dashboard</h1>
+  <div class="header-meta" id="last-update">—</div>
+</header>
+
+<div class="container">
+
+  <!-- Service Status -->
+  <div class="grid-3">
+    <div class="card">
+      <h2>Services</h2>
+      <div id="services-list">
+        <div class="svc-row"><span class="svc-name">Orchestrator</span><span class="svc-badge badge-unknown"><span class="dot"></span>loading</span></div>
+        <div class="svc-row"><span class="svc-name">Gemma LLM</span><span class="svc-badge badge-unknown"><span class="dot"></span>loading</span></div>
+        <div class="svc-row"><span class="svc-name">TTS Service</span><span class="svc-badge badge-unknown"><span class="dot"></span>loading</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>TTS Engines</h2>
+      <div id="engines-list" class="empty-msg">Loading…</div>
+    </div>
+
+    <div class="card">
+      <h2>Cache</h2>
+      <div class="stat-grid">
+        <div class="stat-item"><div class="stat-val" id="cache-files">—</div><div class="stat-label">Files</div></div>
+        <div class="stat-item"><div class="stat-val" id="cache-size">—</div><div class="stat-label">MB used</div></div>
+        <div class="stat-item"><div class="stat-val" id="cache-max">—</div><div class="stat-label">MB limit</div></div>
+        <div class="stat-item"><div class="stat-val" id="cache-pct">—</div><div class="stat-label">% full</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TTS Test Area -->
+  <div class="card tts-section">
+    <h2>TTS Preview</h2>
+    <div class="form-row">
+      <input type="text" id="preview-text" placeholder="Enter text to synthesize…" value="Hello, welcome to GemmaTTS." maxlength="500">
+      <select id="engine-select"><option value="kokoro">kokoro</option></select>
+      <select id="voice-select"><option value="default">default</option></select>
+      <button class="btn" id="preview-btn" onclick="doPreview()">▶ Synthesize</button>
+    </div>
+    <div id="preview-status"></div>
+    <audio id="audio-player" controls></audio>
+  </div>
+
+  <!-- Job History -->
+  <div class="card">
+    <h2>Recent Jobs</h2>
+    <div id="jobs-container" class="empty-msg">No jobs yet</div>
+  </div>
+
+</div>
+
+<script>
+const POLL_INTERVAL = 10000;
+let pollTimer = null;
+
+// ── Fetch status ──
+async function fetchStatus() {
+  try {
+    const resp = await fetch('/dashboard/api/status');
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    renderServices(data.services);
+    renderEngines(data.engines, data.default_engine);
+    renderCache(data.cache);
+    renderJobs(data.recent_jobs);
+    document.getElementById('last-update').textContent =
+      'Updated ' + new Date(data.timestamp).toLocaleTimeString();
+  } catch (err) {
+    document.getElementById('last-update').textContent = 'Update failed: ' + err.message;
+  }
+}
+
+function badgeHTML(status, extra) {
+  const cls = 'badge-' + (status || 'unknown');
+  let label = status || 'unknown';
+  if (extra) label += ` (${extra})`;
+  return `<span class="svc-badge ${cls}"><span class="dot"></span>${label}</span>`;
+}
+
+function renderServices(svcs) {
+  const names = { orchestrator: 'Orchestrator', gemma: 'Gemma LLM', tts: 'TTS Service' };
+  let html = '';
+  for (const [key, info] of Object.entries(svcs)) {
+    const latency = info.latency_ms ? Math.round(info.latency_ms) + 'ms' : '';
+    html += `<div class="svc-row"><span class="svc-name">${names[key] || key}</span>${badgeHTML(info.status, latency)}</div>`;
+  }
+  document.getElementById('services-list').innerHTML = html;
+}
+
+function renderEngines(engines, defaultEng) {
+  if (!engines || engines.length === 0) {
+    document.getElementById('engines-list').innerHTML = '<span class="empty-msg">None available</span>';
+    return;
+  }
+  let html = '';
+  for (const e of engines) {
+    const isDefault = e === defaultEng ? ' <span style="color:var(--accent)">★</span>' : '';
+    html += `<div class="svc-row"><span class="svc-name">${e}${isDefault}</span></div>`;
+  }
+  document.getElementById('engines-list').innerHTML = html;
+
+  // Update engine select
+  const sel = document.getElementById('engine-select');
+  const prev = sel.value;
+  sel.innerHTML = engines.map(e => `<option value="${e}" ${e === prev ? 'selected' : ''}>${e}</option>`).join('');
+  if (!prev || !engines.includes(prev)) sel.value = defaultEng || engines[0];
+}
+
+function renderCache(cache) {
+  if (!cache) return;
+  document.getElementById('cache-files').textContent = cache.total_files;
+  document.getElementById('cache-size').textContent = cache.total_mb;
+  document.getElementById('cache-max').textContent = cache.max_mb;
+  const pct = parseFloat(cache.max_mb) > 0
+    ? ((parseFloat(cache.total_mb) / parseFloat(cache.max_mb)) * 100).toFixed(1)
+    : '0.0';
+  document.getElementById('cache-pct').textContent = pct + '%';
+}
+
+function renderJobs(jobs) {
+  const container = document.getElementById('jobs-container');
+  if (!jobs || jobs.length === 0) {
+    container.innerHTML = '<div class="empty-msg">No jobs yet</div>';
+    return;
+  }
+  let html = `<table class="jobs-table">
+    <thead><tr><th>Time</th><th>Text</th><th>Engine</th><th>Voice</th><th>Status</th><th>Duration</th></tr></thead><tbody>`;
+  for (const j of jobs) {
+    const t = j.timestamp ? new Date(j.timestamp).toLocaleTimeString() : '—';
+    const cls = 'status-' + (j.status || 'pending');
+    const dur = j.duration_ms ? j.duration_ms + 'ms' : '—';
+    html += `<tr>
+      <td>${t}</td>
+      <td title="${(j.text || '').replace(/"/g, '&quot;')}">${j.text || '—'}</td>
+      <td>${j.engine || '—'}</td>
+      <td>${j.voice_id || '—'}</td>
+      <td class="${cls}">${j.status || '—'}</td>
+      <td>${dur}</td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+// ── Fetch voices ──
+async function fetchVoices() {
+  try {
+    const resp = await fetch('/dashboard/api/voices');
+    if (!resp.ok) return;
+    const voices = await resp.json();
+    const sel = document.getElementById('voice-select');
+    if (voices.length > 0) {
+      sel.innerHTML = voices.map(v =>
+        `<option value="${v.id}">${v.name} (${v.engine})</option>`
+      ).join('');
+    }
+  } catch (err) {
+    console.warn('Voice fetch failed:', err);
+  }
+}
+
+// ── Preview ──
+async function doPreview() {
+  const btn = document.getElementById('preview-btn');
+  const statusEl = document.getElementById('preview-status');
+  const player = document.getElementById('audio-player');
+  const text = document.getElementById('preview-text').value.trim();
+  const engine = document.getElementById('engine-select').value;
+  const voice = document.getElementById('voice-select').value;
+
+  if (!text) { statusEl.textContent = 'Enter some text first.'; statusEl.className = 'error'; return; }
+
+  btn.disabled = true;
+  statusEl.textContent = 'Synthesizing…';
+  statusEl.className = '';
+  player.classList.remove('visible');
+
+  try {
+    const resp = await fetch('/dashboard/api/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, engine, voice_id: voice }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: `HTTP ${resp.status}` }));
+      throw new Error(err.detail || `HTTP ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    statusEl.textContent = `Done in ${data.synthesis_ms}ms (${data.format}, ${data.sample_rate}Hz)`;
+    statusEl.className = 'success';
+
+    // Play audio
+    const binary = atob(data.audio_base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'audio/wav' });
+    player.src = URL.createObjectURL(blob);
+    player.classList.add('visible');
+    player.play();
+
+    // Refresh status to show new job
+    fetchStatus();
+
+  } catch (err) {
+    statusEl.textContent = 'Error: ' + err.message;
+    statusEl.className = 'error';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Init ──
+fetchStatus();
+fetchVoices();
+pollTimer = setInterval(fetchStatus, POLL_INTERVAL);
+</script>
+
+</body>
+</html>

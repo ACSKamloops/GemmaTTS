@@ -136,7 +136,7 @@ class AudioCacheManager:
             if file.is_file() and not file.is_symlink() and not file.name.endswith(".json"):
                 try:
                     stat = file.stat()
-                    files.append((stat.st_mtime, stat.st_size, file))
+                    files.append((stat.st_mtime_ns, stat.st_size, file))
                     total_size += stat.st_size
                 except OSError:
                     pass

@@ -207,16 +207,22 @@ def test_piper_dependency_discrepancy():
     Checks that requesting piper synthesis with test_mode=False returns a 503 error
     due to deferred import inside synthesise() raising ImportError.
     """
-    from app.services.tts_service import app
+    import sys
+    from app.services.tts_service import app, _workers
     client = TestClient(app)
     
-    # piper is not installed, so loading it during synthesize raises ImportError.
-    # This now bubbles up as a 503 service unavailable.
-    response = client.post("/synthesize", json={
-        "text": "Hello",
-        "engine": "piper",
-        "test_mode": False
-    })
+    old_worker = _workers.get("piper")
+    _workers["piper"] = None
     
-    assert response.status_code == 503
-    assert "not installed" in response.json()["detail"].lower()
+    try:
+        with patch.dict("sys.modules", {"app.services.tts.piper_worker": None}):
+            response = client.post("/synthesize", json={
+                "text": "Hello",
+                "engine": "piper",
+                "test_mode": False
+            })
+            
+            assert response.status_code == 503
+            assert "not installed" in response.json()["detail"].lower()
+    finally:
+        _workers["piper"] = old_worker

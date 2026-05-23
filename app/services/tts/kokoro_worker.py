@@ -58,6 +58,19 @@ class KokoroWorker:
             logger.info("Kokoro: Using CPUExecutionProvider")
 
         self.kokoro = Kokoro(self.model_path, voices_path=dummy_voices_path)
+        
+        # Monkeypatch onnxruntime InferenceSession.run to cast speed to float32 and style to 2D
+        original_run = self.kokoro.sess.run
+        def patched_run(output_names, input_feed, run_options=None):
+            if "speed" in input_feed:
+                input_feed["speed"] = np.array(input_feed["speed"], dtype=np.float32)
+            if "style" in input_feed:
+                style = input_feed["style"]
+                if len(style.shape) == 1:
+                    input_feed["style"] = np.expand_dims(style, axis=0)
+            return original_run(output_names, input_feed, run_options)
+        self.kokoro.sess.run = patched_run
+
         logger.info("Kokoro ONNX model loaded successfully.")
 
     def _load_voice_embedding(self, voice_id: str) -> np.ndarray:

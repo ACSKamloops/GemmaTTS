@@ -20,6 +20,9 @@ logger = logging.getLogger("gemma-service")
 
 app = FastAPI(title="Gemma Generation Service", version="1.0.0")
 
+from app.middleware.auth import AuthMiddleware
+app.add_middleware(AuthMiddleware)
+
 # ----------------- Configuration & Settings -----------------
 MAX_PROMPT_CHARS = 5000
 MAX_FALLBACK_CHARS = settings.max_text_chars  # usually 1000

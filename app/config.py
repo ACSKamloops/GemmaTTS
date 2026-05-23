@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 from pathlib import Path
+from typing import Optional
 import os
 import secrets
 
@@ -30,5 +31,10 @@ class Settings(BaseSettings):
     # Safety Limits
     max_text_chars: int = 1000
     max_text_words: int = 150
+
+    # Auth & Logging
+    auth_mode: str = "none"        # 'none' | 'token' | 'hmac'
+    api_token: Optional[str] = None
+    log_level: str = "INFO"
 
 settings = Settings()

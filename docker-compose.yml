@@ -1,0 +1,159 @@
+# ==============================================================================
+# GemmaTTS — Docker Compose (GPU-accelerated)
+#
+# Services:
+#   orchestrator  — Central API gateway            (port 8000)
+#   gemma         — Gemma 4 E4B-it text generation (port 8001)
+#   tts           — Multi-engine TTS synthesis      (port 8002)
+#
+# Usage:
+#   docker compose up --build           # Build + start all services
+#   docker compose up -d                # Detached mode
+#   docker compose logs -f orchestrator # Follow logs for one service
+#   docker compose down                 # Stop and remove containers
+#
+# Prerequisites:
+#   - NVIDIA Container Toolkit installed
+#   - Docker Engine ≥ 24.0 with Compose V2
+#   - .env file with HF_TOKEN and SECRET_KEY (see .env.example)
+# ==============================================================================
+
+services:
+  # --------------------------------------------------------------------------
+  # Orchestrator — routes requests between Gemma and TTS services
+  # --------------------------------------------------------------------------
+  orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gemmatts:latest
+    container_name: gemmatts-orchestrator
+    environment:
+      SERVICE_NAME: orchestrator
+      HOST: "0.0.0.0"
+      ORCHESTRATOR_PORT: "8000"
+      SECRET_KEY: "${SECRET_KEY:-}"
+      # Internal service URLs (container-to-container via network)
+      GEMMA_SERVICE_URL: "http://gemma:8001"
+      TTS_SERVICE_URL: "http://tts:8002"
+      DEFAULT_TTS_ENGINE: "${DEFAULT_TTS_ENGINE:-kokoro}"
+      HF_TOKEN: "${HF_TOKEN:-}"
+    ports:
+      - "${ORCHESTRATOR_PORT:-8000}:8000"
+    volumes:
+      - model-data:/opt/gemmatts/models:ro
+      - audio-cache:/opt/gemmatts/public/data/audio_cache
+    networks:
+      - gemmatts-net
+    depends_on:
+      gemma:
+        condition: service_healthy
+      tts:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # --------------------------------------------------------------------------
+  # Gemma Service — LLM text generation (Gemma 4 E4B-it, ~16GB VRAM)
+  # --------------------------------------------------------------------------
+  gemma:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gemmatts:latest
+    container_name: gemmatts-gemma
+    environment:
+      SERVICE_NAME: gemma
+      HOST: "0.0.0.0"
+      GEMMA_PORT: "8001"
+      GEMMA_MODEL_PATH: "/opt/gemmatts/models/gemma"
+      GEMMA_MODEL_ID: "${GEMMA_MODEL_ID:-google/gemma-4-E4B-it}"
+      HF_TOKEN: "${HF_TOKEN:-}"
+    volumes:
+      - model-data:/opt/gemmatts/models
+    networks:
+      - gemmatts-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 180s      # LLM loading takes a while
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # --------------------------------------------------------------------------
+  # TTS Service — multi-engine speech synthesis
+  # --------------------------------------------------------------------------
+  tts:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gemmatts:latest
+    container_name: gemmatts-tts
+    environment:
+      SERVICE_NAME: tts
+      HOST: "0.0.0.0"
+      TTS_PORT: "8002"
+      DEFAULT_TTS_ENGINE: "${DEFAULT_TTS_ENGINE:-kokoro}"
+      HF_TOKEN: "${HF_TOKEN:-}"
+    volumes:
+      - model-data:/opt/gemmatts/models
+      - audio-cache:/opt/gemmatts/public/data/audio_cache
+    networks:
+      - gemmatts-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s      # TTS model loading
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+# ==============================================================================
+# Shared volumes
+# ==============================================================================
+volumes:
+  # Persistent model weights — download once, share across containers
+  model-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./models
+  # Audio cache — shared between orchestrator and TTS
+  audio-cache:
+    driver: local
+
+# ==============================================================================
+# Custom network
+# ==============================================================================
+networks:
+  gemmatts-net:
+    driver: bridge
+    name: gemmatts-net
