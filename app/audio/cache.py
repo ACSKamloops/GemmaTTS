@@ -27,7 +27,7 @@ def get_cache_key(
     normalized_text = re.sub(r"\s+", " ", text).strip().lower()
     payload = (
         f"{normalized_text}:{voice_id}:{format}:{engine}:{model_id or ''}:"
-        f"{model_version or ''}:{voice_ref_hash or ''}:{speed}:{language}:{sample_rate}:"
+        f"{model_version or ''}:{voice_ref_hash or ''}:{speed}:{language}:"
         f"{codec or ''}:{encoder_settings or ''}:{audio_pipeline_version}"
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
