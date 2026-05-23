@@ -11,6 +11,11 @@ app = FastAPI(
     version="1.0.0"
 )
 
+import os
+
+if settings.mode == "real" and not os.getenv("SECRET_KEY"):
+    raise RuntimeError("SECRET_KEY is required in MODE=real")
+
 # Apply global authentication middleware
 app.add_middleware(AuthMiddleware)
 
@@ -23,7 +28,7 @@ app.include_router(audio.router)
 app.include_router(voices.router)
 app.include_router(generate.router)
 
-if settings.mode != "real":
+if settings.debug_enabled:
     from app.api import debug
     app.include_router(debug.router)
 

@@ -47,19 +47,22 @@ class KokoroProvider(TTSProvider):
         else:
             logger.info("Kokoro: Using CPUExecutionProvider")
 
+        from app.config import settings
+
         self.kokoro = Kokoro(self.model_path, voices_path=dummy_voices_path)
         
-        # Safely wrap internal sess.run to bypass onnxruntime input shape/type restrictions
-        original_run = self.kokoro.sess.run
-        def patched_run(output_names, input_feed, run_options=None):
-            if "speed" in input_feed:
-                input_feed["speed"] = np.array(input_feed["speed"], dtype=np.float32)
-            if "style" in input_feed:
-                style = input_feed["style"]
-                if len(style.shape) == 1:
-                    input_feed["style"] = np.expand_dims(style, axis=0)
-            return original_run(output_names, input_feed, run_options)
-        self.kokoro.sess.run = patched_run
+        if settings.kokoro_provider_mode == "legacy_manual_embedding":
+            # Safely wrap internal sess.run to bypass onnxruntime input shape/type restrictions
+            original_run = self.kokoro.sess.run
+            def patched_run(output_names, input_feed, run_options=None):
+                if "speed" in input_feed:
+                    input_feed["speed"] = np.array(input_feed["speed"], dtype=np.float32)
+                if "style" in input_feed:
+                    style = input_feed["style"]
+                    if len(style.shape) == 1:
+                        input_feed["style"] = np.expand_dims(style, axis=0)
+                return original_run(output_names, input_feed, run_options)
+            self.kokoro.sess.run = patched_run
 
         logger.info("Kokoro ONNX model loaded successfully.")
 
@@ -96,10 +99,16 @@ class KokoroProvider(TTSProvider):
     def synthesize(self, text: str, voice_id: str = "default") -> tuple[bytes, int]:
         self.load()
 
+        from app.config import settings
+
         if voice_id == "default":
             voice_id = "af_heart"
 
-        embedding = self._resolve_voice(voice_id)
+        if settings.kokoro_provider_mode == "legacy_manual_embedding":
+            embedding = self._resolve_voice(voice_id)
+        else:
+            embedding = self.kokoro.get_voice(voice_id)
+
         samples, sample_rate = self.kokoro.create(
             text, voice=embedding, speed=1.0, lang="en-us"
         )

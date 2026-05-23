@@ -54,8 +54,8 @@ def get_tts_provider(engine: str) -> Any:
 class SynthesizeRequest(BaseModel):
     text: str
     voice_id: Optional[str] = "default"
-    engine: Literal["chatterbox", "dia", "fish", "f5_tts", "kokoro", "piper"]
-    test_mode: Optional[bool] = None
+    engine: Literal["chatterbox", "dia", "f5_tts", "kokoro", "piper"]
+    profile: Optional[str] = None
 
     @field_validator('text')
     @classmethod
@@ -73,8 +73,8 @@ class SynthesizeResponse(BaseModel):
 class StreamRequest(BaseModel):
     text: str
     voice_id: Optional[str] = "default"
-    engine: Literal["chatterbox", "dia", "fish", "f5_tts", "kokoro", "piper"]
-    test_mode: Optional[bool] = None
+    engine: Literal["chatterbox", "dia", "f5_tts", "kokoro", "piper"]
+    profile: Optional[str] = None
 
     @field_validator('text')
     @classmethod
@@ -86,10 +86,10 @@ class StreamRequest(BaseModel):
 class ExportRequest(BaseModel):
     text: str
     voice_id: Optional[str] = "default"
-    engine: Literal["chatterbox", "dia", "fish", "f5_tts", "kokoro", "piper"]
+    engine: Literal["chatterbox", "dia", "f5_tts", "kokoro", "piper"]
     format: Literal["wav", "ogg", "mp3"] = "wav"
     filename: Optional[str] = "tts_output"
-    test_mode: Optional[bool] = None
+    profile: Optional[str] = None
 
     @field_validator('text')
     @classmethod
@@ -116,9 +116,9 @@ class ExportRequest(BaseModel):
 class TTSRequest(BaseModel):
     text: str
     voice_id: Optional[str] = "default"
-    engine: Optional[Literal["chatterbox", "dia", "fish", "f5_tts", "kokoro", "piper"]] = "kokoro"
+    engine: Optional[Literal["chatterbox", "dia", "f5_tts", "kokoro", "piper"]] = "chatterbox"
     format: Optional[str] = "wav"
-    test_mode: Optional[bool] = None
+    profile: Optional[str] = None
 
     @field_validator('format')
     @classmethod
@@ -151,10 +151,8 @@ class TTSResponse(BaseModel):
     metrics: Metrics
 
 # ----------------- Shared Helpers -----------------
-def _check_real_mode_violation(text: str, voice_id: Optional[str], test_mode: Optional[bool]):
+def _check_real_mode_violation(text: str, voice_id: Optional[str]):
     if settings.mode == "real":
-        if test_mode is not None:
-            raise HTTPException(status_code=400, detail="test_mode parameter is forbidden in production/real mode.")
         simulation_keywords = [
             "simulate_offline", "simulate_client_disconnect", "duration_sec=", "size_bytes="
         ]
@@ -162,6 +160,17 @@ def _check_real_mode_violation(text: str, voice_id: Optional[str], test_mode: Op
             raise HTTPException(status_code=400, detail="Simulation keywords are forbidden in production/real mode.")
         if voice_id and any(kw in voice_id for kw in ("simulate_offline", "enable_fish")):
             raise HTTPException(status_code=400, detail="Simulation keywords are forbidden in production/real mode.")
+
+def _check_f5_tts_gating(engine: str):
+    if engine == "f5_tts":
+        if not settings.enable_f5_tts:
+            raise HTTPException(
+                status_code=400,
+                detail="F5-TTS engine is disabled. F5-TTS is licensed under a non-commercial license; enable it by setting ENABLE_F5_TTS=true in configuration."
+            )
+        else:
+            import logging
+            logging.getLogger("tts-api").warning("F5-TTS is enabled. Please note that F5-TTS is licensed under a non-commercial license.")
 
 def _check_fish_consent(engine: str, voice_id: Optional[str]):
     if engine != "fish":
@@ -174,9 +183,9 @@ def _check_fish_consent(engine: str, voice_id: Optional[str]):
             detail="Fish Audio engine requires explicit consent."
         )
 
-def _synthesize_wav_in_process(engine: str, text: str, voice_id: Optional[str], test_mode: Optional[bool] = None) -> tuple[bytes, int]:
+def _synthesize_wav_in_process(engine: str, text: str, voice_id: Optional[str]) -> tuple[bytes, int]:
     """Helper calling in-process TTS providers."""
-    if settings.mode == "test" and test_mode is not False:
+    if settings.mode == "test":
         tts = get_tts_provider(engine)
     else:
         from app.services.tts_service import get_worker
@@ -189,13 +198,14 @@ def _synthesize_wav_in_process(engine: str, text: str, voice_id: Optional[str], 
 def post_synthesize(req: SynthesizeRequest):
     if not rate_limiter.is_allowed():
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too Many Requests")
-    _check_real_mode_violation(req.text, req.voice_id, req.test_mode)
+    _check_f5_tts_gating(req.engine)
+    _check_real_mode_violation(req.text, req.voice_id)
     _check_fish_consent(req.engine, req.voice_id)
 
     start_time = time.time()
     
     try:
-        wav_bytes, sample_rate = _synthesize_wav_in_process(req.engine, req.text, req.voice_id, req.test_mode)
+        wav_bytes, sample_rate = _synthesize_wav_in_process(req.engine, req.text, req.voice_id)
         
         # Audio post processing pipeline
         from app.audio.pipeline import AudioPipeline
@@ -224,16 +234,17 @@ def post_synthesize(req: SynthesizeRequest):
             detail=f"TTS synthesis failure on engine '{req.engine}': {str(e)}"
         )
 
-@router.post("/synthesize/stream")
-def post_synthesize_stream(req: StreamRequest):
+@router.post("/synthesize/pcm")
+def post_synthesize_pcm(req: StreamRequest):
     if not rate_limiter.is_allowed():
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too Many Requests")
-    _check_real_mode_violation(req.text, req.voice_id, req.test_mode)
+    _check_f5_tts_gating(req.engine)
+    _check_real_mode_violation(req.text, req.voice_id)
     _check_fish_consent(req.engine, req.voice_id)
 
     start_time = time.time()
     try:
-        wav_bytes, sample_rate = _synthesize_wav_in_process(req.engine, req.text, req.voice_id, req.test_mode)
+        wav_bytes, sample_rate = _synthesize_wav_in_process(req.engine, req.text, req.voice_id)
         from app.audio.pipeline import AudioPipeline
         pipeline = AudioPipeline()
         wav_bytes, sample_rate = pipeline.process_wav_bytes(wav_bytes, sample_rate)
@@ -284,11 +295,12 @@ def post_synthesize_stream(req: StreamRequest):
 def post_synthesize_export(req: ExportRequest):
     if not rate_limiter.is_allowed():
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too Many Requests")
-    _check_real_mode_violation(req.text, req.voice_id, req.test_mode)
+    _check_f5_tts_gating(req.engine)
+    _check_real_mode_violation(req.text, req.voice_id)
     _check_fish_consent(req.engine, req.voice_id)
 
     try:
-        wav_bytes, sample_rate = _synthesize_wav_in_process(req.engine, req.text, req.voice_id, req.test_mode)
+        wav_bytes, sample_rate = _synthesize_wav_in_process(req.engine, req.text, req.voice_id)
         from app.audio.pipeline import AudioPipeline
         pipeline = AudioPipeline()
         wav_bytes, sample_rate = pipeline.process_wav_bytes(wav_bytes, sample_rate)
@@ -362,8 +374,9 @@ async def post_v1_tts(
 ):
     if not rate_limiter.is_allowed():
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too Many Requests")
-    _check_real_mode_violation(req.text, req.voice_id, req.test_mode)
     engine = req.engine or "kokoro"
+    _check_f5_tts_gating(engine)
+    _check_real_mode_violation(req.text, req.voice_id)
     _check_fish_consent(engine, req.voice_id)
 
     t_start = time.time()
@@ -376,10 +389,10 @@ async def post_v1_tts(
     if cache_control and "no-cache" in cache_control.lower():
         use_cache = False
         
-    cache_key = get_cache_key(sanitized_text_val, req.voice_id, req.format, engine=engine)
+    cache_key = get_cache_key(sanitized_text_val, req.voice_id, req.format, engine=engine, encoder_settings=req.profile)
     cached_data = None
     if use_cache:
-        cached_data = cache_manager.get(sanitized_text_val, req.voice_id, req.format, engine=engine)
+        cached_data = cache_manager.get(sanitized_text_val, req.voice_id, req.format, engine=engine, encoder_settings=req.profile)
         
     # Detect corruption
     is_corrupt = False
@@ -404,7 +417,7 @@ async def post_v1_tts(
     if cache_hit:
         encoded_data = cached_data
         try:
-            metadata = cache_manager.get_metadata(sanitized_text_val, req.voice_id, req.format, engine=engine)
+            metadata = cache_manager.get_metadata(sanitized_text_val, req.voice_id, req.format, engine=engine, encoder_settings=req.profile)
             if metadata and "duration_ms" in metadata:
                 duration_ms = metadata["duration_ms"]
             else:
@@ -415,14 +428,14 @@ async def post_v1_tts(
         # Synthesis
         t_tts_start = time.time()
         try:
-            wav_bytes, sample_rate = _synthesize_wav_in_process(engine, sanitized_text_val, req.voice_id, req.test_mode)
+            wav_bytes, sample_rate = _synthesize_wav_in_process(engine, sanitized_text_val, req.voice_id)
         except Exception as e:
             # Fallback to piper for Dia failures
             if engine == "dia":
                 logger.warning(f"Dia synthesis failed, falling back to Piper: {e}")
                 engine = "piper"
                 try:
-                    wav_bytes, sample_rate = _synthesize_wav_in_process("piper", sanitized_text_val, req.voice_id, req.test_mode)
+                    wav_bytes, sample_rate = _synthesize_wav_in_process("piper", sanitized_text_val, req.voice_id)
                 except Exception as inner_e:
                     job_store.update_job(job_id, {"state": "failed", "error": str(inner_e)})
                     if isinstance(inner_e, ImportError):
@@ -465,7 +478,8 @@ async def post_v1_tts(
                 req.format,
                 encoded_data,
                 duration_ms=duration_ms,
-                engine=engine
+                engine=engine,
+                encoder_settings=req.profile
             )
         except ValueError as e:
             job_store.update_job(job_id, {"state": "failed", "error": str(e)})

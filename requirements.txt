@@ -1,1 +1,4 @@
 -r requirements/base.txt
+-r requirements/gemma.txt
+-r requirements/tts-chatterbox.txt
+-r requirements/test.txt

@@ -84,6 +84,9 @@ class DialogueOrchestrator:
         speaker_id: str,
         speaker_name: str,
         voice_id: str,
+        engine: str = "chatterbox",
+        profile: Optional[str] = None,
+        fallback_policy: str = "raise_error",
         style: Optional[str] = None,
         location: Optional[str] = None,
         facts: Optional[list] = None,
@@ -137,8 +140,11 @@ class DialogueOrchestrator:
                     # In test mode we allow plain text response for backward compatibility, but in real mode it fails
                     if settings.mode == "test" and raw_llm_output.startswith("MOCK_RESPONSE:"):
                         generated_text = raw_llm_output
-                    else:
+                    elif fallback_policy == "use_static_text":
                         generated_text = "Fallback dialogue text due to schema mismatch."
+                    else:
+                        job_store.update_job(job_id, {"state": "failed", "error": "llm_schema_mismatch"})
+                        raise HTTPException(status_code=502, detail="LLM output schema mismatch")
                 else:
                     generated_text = parsed_json.get("text", "")
                     
@@ -182,7 +188,11 @@ class DialogueOrchestrator:
                 
                 # Validate JSON schema if it was formatted
                 if raw_llm_output == "not-a-json-string-at-all":
-                    generated_text = "Fallback dialogue text due to schema mismatch."
+                    if fallback_policy == "use_static_text":
+                        generated_text = "Fallback dialogue text due to schema mismatch."
+                    else:
+                        job_store.update_job(job_id, {"state": "failed", "error": "llm_schema_mismatch"})
+                        raise HTTPException(status_code=502, detail="LLM output schema mismatch")
                 else:
                     generated_text = raw_llm_output
                 
@@ -219,23 +229,11 @@ class DialogueOrchestrator:
         if cache_control and "no-cache" in cache_control.lower():
             use_cache = False
 
-        # Determine active engine
-        engine = "chatterbox"
-        style_lower = (style or "").lower()
-        if "dia" in style_lower:
-            engine = "dia"
-        elif "fish" in style_lower:
-            engine = "fish"
-        elif "kokoro" in style_lower:
-            engine = "kokoro"
-        elif "piper" in style_lower:
-            engine = "piper"
-
-        cache_key = get_cache_key(generated_text, voice_id, audio_format, engine=engine)
+        cache_key = get_cache_key(generated_text, voice_id, audio_format, engine=engine, encoder_settings=profile)
         
         cached_data = None
         if use_cache:
-            cached_data = self.cache_manager.get(generated_text, voice_id, audio_format, engine=engine)
+            cached_data = self.cache_manager.get(generated_text, voice_id, audio_format, engine=engine, encoder_settings=profile)
             
         # Detect corruption
         is_corrupt = False
@@ -261,7 +259,7 @@ class DialogueOrchestrator:
             encoded_data = cached_data
             # Probe cached duration
             try:
-                metadata = self.cache_manager.get_metadata(generated_text, voice_id, audio_format, engine=engine)
+                metadata = self.cache_manager.get_metadata(generated_text, voice_id, audio_format, engine=engine, encoder_settings=profile)
                 if metadata:
                     if "duration_ms" in metadata:
                         duration_ms = metadata["duration_ms"]
@@ -379,7 +377,8 @@ class DialogueOrchestrator:
                     audio_format,
                     encoded_data,
                     duration_ms=duration_ms,
-                    engine=engine
+                    engine=engine,
+                    encoder_settings=profile
                 )
             except ValueError as e:
                 job_store.update_job(job_id, {"state": "failed", "error": str(e)})

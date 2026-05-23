@@ -34,7 +34,6 @@ class GenerateRequest(BaseModel):
     prompt: str
     max_words: Optional[int] = 150
     enable_thinking: Optional[bool] = False
-    test_mode: Optional[bool] = None
 
     @field_validator('prompt')
     @classmethod
@@ -80,8 +79,6 @@ def post_generate(req: GenerateRequest):
 
     # Real mode violation check
     if settings.mode == "real":
-        if req.test_mode is not None:
-            raise HTTPException(status_code=400, detail="test_mode parameter is forbidden in production/real mode.")
         if "simulate_llm_bad_json" in req.prompt:
             raise HTTPException(status_code=400, detail="Simulation keywords are forbidden in production/real mode.")
 

@@ -172,7 +172,7 @@ def test_dialogue_corrupt_cache_recovery(mock_post, client):
     assert response1.json()["metrics"]["cache_hit"] is False
 
     # Get the cache file path and write all zeros to corrupt it
-    cache_key = get_cache_key(text, "af_heart", "wav", engine="chatterbox")
+    cache_key = get_cache_key(text, "af_heart", "wav", engine="chatterbox", encoder_settings="voice_agent_fast")
     cache_manager = AudioCacheManager()
     path = cache_manager.get_file_path(cache_key, "wav")
     assert path.exists()
@@ -209,36 +209,49 @@ def test_dialogue_llm_schema_mismatch_fallback(mock_post, client):
     payload = {
         "speaker": {"id": "npc_maria", "name": "Maria", "voice_id": "af_heart", "style": "calm"},
         "user_text": "simulate-llm-bad-json",
-        "output": {"audio": False, "format": "wav"}
+        "output": {"audio": False, "format": "wav"},
+        "fallback_policy": "use_static_text"
     }
     response = client.post("/v1/dialogue", json=payload)
     assert response.status_code == 200
     assert "Fallback dialogue text due to schema mismatch." in response.json()["text"]
 
 @patch("httpx.AsyncClient.post", side_effect=mock_httpx_post)
+def test_dialogue_llm_schema_mismatch_raise_error(mock_post, client):
+    payload = {
+        "speaker": {"id": "npc_maria", "name": "Maria", "voice_id": "af_heart", "style": "calm"},
+        "user_text": "simulate-llm-bad-json",
+        "output": {"audio": False, "format": "wav"},
+        "fallback_policy": "raise_error"
+    }
+    response = client.post("/v1/dialogue", json=payload)
+    assert response.status_code == 502
+
+@patch("httpx.AsyncClient.post", side_effect=mock_httpx_post)
 def test_dialogue_style_engine_selection(mock_post, client):
-    styles = ["dia", "fish", "kokoro", "piper"]
-    for s in styles:
+    engines = ["dia", "kokoro", "piper", "f5_tts"]
+    for eng in engines:
         payload = {
-            "speaker": {"id": "npc_maria", "name": "Maria", "voice_id": "af_heart" if s != "fish" else "enable_fish", "style": s},
-            "user_text": f"Style test for {s}",
-            "output": {"audio": True, "format": "wav"}
+            "speaker": {"id": "npc_maria", "name": "Maria", "voice_id": "af_heart", "style": "calm"},
+            "user_text": f"Engine test for {eng}",
+            "output": {"audio": True, "format": "wav"},
+            "tts": {"engine": eng, "voice_id": "default", "format": "wav", "profile": "voice_agent_fast"}
         }
-        response = client.post("/v1/dialogue", json=payload)
-        assert response.status_code == 200
-        
-        # Verify call arguments
-        # The last post request should be to TTS service
-        called_args = mock_post.call_args_list[-1]
-        payload_sent = called_args[1]["json"]
-        assert payload_sent["engine"] == s
+        with patch.object(settings, "enable_f5_tts", True):
+            response = client.post("/v1/dialogue", json=payload)
+            assert response.status_code == 200
+            
+            called_args = mock_post.call_args_list[-1]
+            payload_sent = called_args[1]["json"]
+            assert payload_sent["engine"] == eng
 
 @patch("httpx.AsyncClient.post", side_effect=mock_httpx_post)
 def test_dialogue_dia_failure_fallback_to_piper(mock_post, client):
     payload = {
         "speaker": {"id": "npc_maria", "name": "Maria", "voice_id": "af_heart_dia_simulate_offline", "style": "dia"},
         "user_text": "Dia fallback to Piper test",
-        "output": {"audio": True, "format": "wav"}
+        "output": {"audio": True, "format": "wav"},
+        "tts": {"engine": "dia"}
     }
     response = client.post("/v1/dialogue", json=payload)
     assert response.status_code == 200

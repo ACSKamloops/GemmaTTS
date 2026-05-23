@@ -22,9 +22,14 @@ class Settings(BaseSettings):
     gemma_url: str = "http://127.0.0.1:8001"
 
     # TTS Settings (engine defaults)
-    default_tts_engine: str = "kokoro"
+    default_tts_engine: str = "chatterbox"
     tts_url: str = "http://127.0.0.1:8002"
     voice_ref_dir: Path = Path("models/voices_ref").resolve()
+    enable_f5_tts: bool = False
+    kokoro_provider_mode: Literal["official", "legacy_manual_embedding"] = "legacy_manual_embedding"
+
+    # Debugging
+    debug_enabled: bool = False
 
     # Security & Signing
     secret_key: str = Field(default_factory=lambda: os.getenv("SECRET_KEY", secrets.token_hex(32)))

@@ -1,9 +1,10 @@
-from typing import List, Optional
+from typing import List, Optional, Literal
 from fastapi import APIRouter, Request, Header, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
 from app.config import settings
 from app.core.orchestrator import dialogue_orchestrator
+from app.api.tts import _check_f5_tts_gating
 
 router = APIRouter(tags=["dialogue"])
 
@@ -26,6 +27,12 @@ class OutputConfig(BaseModel):
     audio: bool
     format: str
 
+class TTSConfig(BaseModel):
+    engine: Literal["chatterbox", "dia", "kokoro", "piper", "f5_tts"] = "chatterbox"
+    voice_id: str = "default"
+    format: Literal["wav", "ogg", "mp3"] = "wav"
+    profile: Literal["voice_agent_fast", "game_npc_ogg", "high_quality_narration", "raw_model_output"] = "voice_agent_fast"
+
 class DialogueRequest(BaseModel):
     request_id: Optional[str] = None
     speaker: Speaker
@@ -33,7 +40,8 @@ class DialogueRequest(BaseModel):
     user_text: str
     max_words: Optional[int] = 150
     output: OutputConfig
-    test_mode: Optional[bool] = None  # Ignored or rejected in real mode
+    tts: TTSConfig = Field(default_factory=TTSConfig)
+    fallback_policy: Literal["use_static_text", "raise_error"] = "raise_error"
 
 class AudioMetadata(BaseModel):
     audio_id: str
@@ -67,11 +75,11 @@ async def post_dialogue(
     if req.output.audio and req.output.format not in ("wav", "ogg", "mp3"):
         raise HTTPException(status_code=422, detail=f"Unsupported format: {req.output.format}")
 
+    # Gate F5-TTS
+    _check_f5_tts_gating(req.tts.engine)
+
     # If in real mode, reject any test/simulation triggers
     if settings.mode == "real":
-        if req.test_mode is not None:
-            raise HTTPException(status_code=400, detail="test_mode parameter is forbidden in production/real mode.")
-            
         simulation_keywords = [
             "simulate_llm_crash", "simulate_client_disconnect", "simulate_offline",
             "simulate-llm-bad-json", "simulate_llm_bad_json", "simulate_llm_failed_status"
@@ -88,6 +96,9 @@ async def post_dialogue(
     if req.context and req.context.facts:
         facts_list = [{"id": f.id, "can_reveal": f.can_reveal, "fact": f.fact} for f in req.context.facts]
 
+    # Resolve voice_id and format from tts config if override is active
+    voice_id = req.tts.voice_id if req.tts.voice_id != "default" else req.speaker.voice_id
+
     # Execute dialogue pipeline
     async def is_disconnected():
         return await request.is_disconnected()
@@ -96,7 +107,10 @@ async def post_dialogue(
         user_text=req.user_text,
         speaker_id=req.speaker.id,
         speaker_name=req.speaker.name,
-        voice_id=req.speaker.voice_id,
+        voice_id=voice_id,
+        engine=req.tts.engine,
+        profile=req.tts.profile,
+        fallback_policy=req.fallback_policy,
         style=req.speaker.style,
         location=location,
         facts=facts_list,
@@ -110,7 +124,7 @@ async def post_dialogue(
     if result.get("state") == "failed":
         err_msg = result.get("error", "Dialogue processing failed")
         if err_msg == "llm_schema_mismatch":
-            raise HTTPException(status_code=500, detail="LLM output schema mismatch")
+            raise HTTPException(status_code=502, detail="LLM output schema mismatch")
         raise HTTPException(status_code=503, detail="Service Unavailable")
         
     if result.get("state") == "canceled":

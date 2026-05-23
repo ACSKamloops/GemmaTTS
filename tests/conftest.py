@@ -1,3 +1,5 @@
+import os
+os.environ["DEBUG_ENABLED"] = "true"
 import pytest
 import shutil
 from pathlib import Path
@@ -13,6 +15,7 @@ def setup_test_environment():
     settings.secret_key = "test-secret-key-for-hmac-verification-operations"
     settings.mode = "test"
     settings.unified = False
+    settings.debug_enabled = True
     
     if test_cache_dir.exists():
         shutil.rmtree(test_cache_dir)

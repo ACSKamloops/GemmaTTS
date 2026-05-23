@@ -1,3 +1,4 @@
-torch>=2.6.0
-torchaudio>=2.6.0
-descript-audio-codec>=1.0.0
+torch>=2.8.0 ; platform_system != "Windows"
+torchaudio
+descript-audio-codec
+git+https://github.com/nari-labs/dia.git
