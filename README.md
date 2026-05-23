@@ -19,10 +19,10 @@ User/application request
 
 | Engine | Model | Quality | Speed | Verification State | Use Case / Notes |
 |--------|-------|---------|-------|-------------------|------------------|
-| **Chatterbox** | Resemble AI 0.5B | ★★★★★ | Medium | **Default / Verified** | Voice cloning, emotion control |
-| **Kokoro** | 82M ONNX | ★★★★ | Fast | **Verified** | Many voices, low latency |
-| **Piper** | Lessac Medium | ★★★ | Fastest | **Verified** | Always works, low resource |
-| **Dia** | Nari Labs 1.6B | ★★★★★ | Slow | **Experimental** | Multi-speaker dialogue ([S1]/[S2]) |
+| **Chatterbox** | Resemble AI 0.5B | ★★★★★ | Medium | **Default / Smoke-test available** | Voice cloning, emotion control |
+| **Kokoro** | 82M ONNX | ★★★★ | Fast | **Smoke-test available** | Many voices, low latency |
+| **Piper** | Lessac Medium | ★★★ | Fastest | **Smoke-test available** | Always works, low resource |
+| **Dia** | Nari Labs 1.6B | ★★★★★ | Slow | **Smoke-test available** | Multi-speaker dialogue ([S1]/[S2]) |
 | **F5-TTS** | SWivid 1.2B | ★★★★ | Medium | **Experimental** | Voice cloning. Disabled by default due to non-commercial license (enable with `ENABLE_F5_TTS=true`) |
 
 ## Requirements
@@ -50,6 +50,8 @@ pip install -r requirements.txt
 export HF_TOKEN="your_huggingface_token"
 python scripts/download_models.py
 ```
+*Note: F5-TTS is not downloaded by default. Use `--include-f5` only if you accept the non-commercial/gated model path.*
+
 
 ### 4. Run the Unified Service
 ```bash
@@ -65,7 +67,7 @@ The single-process server exposes all endpoints unified under port 8000:
 - `POST /v1/dialogue` — Generate text + speech synthesis (unified pipeline)
 - `POST /v1/tts` — Speech synthesis with selectable engine and cache lookup
 - `POST /synthesize` — Direct in-process speech synthesis
-- `POST /synthesize/pcm` — Raw PCM s16le audio stream endpoint
+- `POST /synthesize/stream` — Raw PCM s16le audio stream endpoint
 - `POST /synthesize/export` — File download export (WAV/OGG/MP3)
 - `GET /audio/{signed_id}` — Retrieve cached audio (HMAC-signed URL verification)
 - `POST /generate` — Text generation via Gemma 4 E4B-it
@@ -91,7 +93,7 @@ The single-process server exposes all endpoints unified under port 8000:
 pytest --ignore=tests/smoke/ -v
 
 # Run real-engine smoke tests under local GPU/WSL environment
-pytest tests/smoke/ -v
+RUN_REAL_SMOKE=1 pytest tests/smoke/ -v
 ```
 
 ## Benchmarks

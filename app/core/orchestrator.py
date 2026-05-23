@@ -131,7 +131,7 @@ class DialogueOrchestrator:
                 raw_llm_output = await asyncio.to_thread(llm.generate, prompt, max_words)
                 
                 # Output Schema validation
-                if "simulate-llm-bad-json" in user_text or "simulate_llm_bad_json" in user_text:
+                if settings.mode == "test" and ("simulate-llm-bad-json" in user_text or "simulate_llm_bad_json" in user_text):
                     # Trigger bad json simulation for E2E tests
                     raw_llm_output = "not-a-json-string-at-all"
                     
@@ -346,6 +346,11 @@ class DialogueOrchestrator:
             
             tts_ms = (time.time() - t_tts_start) * 1000.0
             
+            # Audio post processing pipeline
+            from app.audio.pipeline import AudioPipeline
+            pipeline = AudioPipeline()
+            wav_bytes, sample_rate = pipeline.process_wav_bytes(wav_bytes, sample_rate, profile=profile)
+            
             # Determine duration
             duration_ms = get_audio_duration_ms(wav_bytes, "wav")
             
@@ -377,6 +382,7 @@ class DialogueOrchestrator:
                     audio_format,
                     encoded_data,
                     duration_ms=duration_ms,
+                    sample_rate=sample_rate,
                     engine=engine,
                     encoder_settings=profile
                 )

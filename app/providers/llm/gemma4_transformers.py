@@ -118,7 +118,13 @@ class Gemma4TransformersProvider(LLMProvider):
         response = self.processor.decode(generated_tokens, skip_special_tokens=False)
         
         # Parse spoken response using the processor API
-        spoken_response = self.processor.parse_response(response)
+        parsed_response = self.processor.parse_response(response)
+        if isinstance(parsed_response, dict):
+            spoken_response = parsed_response.get("content", "")
+        elif isinstance(parsed_response, list) and len(parsed_response) > 0 and isinstance(parsed_response[0], dict):
+            spoken_response = parsed_response[0].get("content", "")
+        else:
+            spoken_response = str(parsed_response)
         
         # Trim whitespace
         spoken_response = spoken_response.strip()

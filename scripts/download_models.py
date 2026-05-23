@@ -40,7 +40,7 @@ def parse_args():
                         help="Download only lightweight test models (test gemma, kokoro, piper)")
     parser.add_argument("--skip-gemma", action="store_true", help="Skip downloading Gemma 4")
     parser.add_argument("--skip-dia", action="store_true", help="Skip downloading Dia 1.6B")
-    parser.add_argument("--skip-f5", action="store_true", help="Skip downloading F5-TTS")
+    parser.add_argument("--include-f5", action="store_true", help="Include downloading F5-TTS (opt-in)")
     return parser.parse_args()
 
 
@@ -253,7 +253,7 @@ def main():
             skipped.add("dia")
         else:
             results["dia"] = download_dia(args.output_dir, token)
-        if args.skip_f5:
+        if not args.include_f5:
             skipped.add("f5_tts")
         else:
             results["f5_tts"] = download_f5_tts(args.output_dir)

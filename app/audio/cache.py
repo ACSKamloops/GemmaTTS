@@ -27,7 +27,7 @@ def get_cache_key(
     normalized_text = re.sub(r"\s+", " ", text).strip().lower()
     payload = (
         f"{normalized_text}:{voice_id}:{format}:{engine}:{model_id or ''}:"
-        f"{model_version or ''}:{voice_ref_hash or ''}:{speed}:{language}:{sample_rate}:"
+        f"{model_version or ''}:{voice_ref_hash or ''}:{speed}:{language}:"
         f"{codec or ''}:{encoder_settings or ''}:{audio_pipeline_version}"
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
@@ -138,10 +138,30 @@ class AudioCacheManager:
         time.sleep(0.002)
         path.write_bytes(data)
 
+        meta = {}
         if duration_ms is not None:
-            import json
-            meta_path = path.with_suffix(path.suffix + ".json")
-            meta_path.write_text(json.dumps({"duration_ms": duration_ms}), encoding="utf-8")
+            meta["duration_ms"] = duration_ms
+            
+        sample_rate = kwargs.get("sample_rate")
+        if sample_rate is not None:
+            meta["sample_rate"] = sample_rate
+            
+        engine = kwargs.get("engine")
+        if engine is not None:
+            meta["engine"] = engine
+            
+        meta["format"] = format
+        
+        profile = kwargs.get("profile") or kwargs.get("encoder_settings")
+        if profile is not None:
+            meta["profile"] = profile
+            
+        ap_version = kwargs.get("audio_pipeline_version", "v1")
+        meta["audio_pipeline_version"] = ap_version
+
+        import json
+        meta_path = path.with_suffix(path.suffix + ".json")
+        meta_path.write_text(json.dumps(meta), encoding="utf-8")
 
         return path
         

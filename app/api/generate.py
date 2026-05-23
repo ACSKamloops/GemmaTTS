@@ -85,7 +85,7 @@ def post_generate(req: GenerateRequest):
     start_time = time.time()
 
     # Simulation triggers
-    if "simulate_llm_bad_json" in req.prompt:
+    if settings.mode == "test" and "simulate_llm_bad_json" in req.prompt:
         return Response(content="not-a-json-string-at-all", media_type="text/plain")
 
     # Limit prompt input length if exceeding threshold

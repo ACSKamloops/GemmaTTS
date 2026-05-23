@@ -32,24 +32,9 @@ def get_worker(engine: str) -> Any:
     elif engine == "f5_tts":
         import app.services.tts.f5_tts_worker as f5_tts_worker
 
-    # Return the new provider instance since that's our real implementation
-    if engine == "kokoro":
-        from app.providers.tts.kokoro import KokoroProvider
-        return KokoroProvider()
-    elif engine == "piper":
-        from app.providers.tts.piper import PiperProvider
-        return PiperProvider()
-    elif engine == "chatterbox":
-        from app.providers.tts.chatterbox import ChatterboxProvider
-        return ChatterboxProvider()
-    elif engine == "dia":
-        from app.providers.tts.dia import DiaProvider
-        return DiaProvider()
-    elif engine == "f5_tts":
-        from app.providers.tts.f5_tts import F5TTSProvider
-        return F5TTSProvider()
-    else:
-        raise ValueError(f"Unsupported TTS engine: {engine}")
+    # Return the cached provider from the orchestrator
+    from app.core.orchestrator import get_tts_provider
+    return get_tts_provider(engine)
 
 app = FastAPI()
 

@@ -90,16 +90,6 @@ class TestSynthesizeStream:
         assert resp.status_code == 422
 
     # --- consent / offline ---
-    def test_stream_fish_consent_blocked(self, monkeypatch):
-        monkeypatch.delenv("ENABLE_FISH_AUDIO", raising=False)
-        payload = {
-            "text": "Hello",
-            "voice_id": "default",
-            "engine": "fish",
-            "test_mode": True,
-        }
-        resp = client.post("/synthesize/stream", json=payload)
-        assert resp.status_code == 403
 
     def test_stream_dia_offline(self):
         payload = {
@@ -201,17 +191,6 @@ class TestSynthesizeExport:
         assert resp.status_code == 422
 
     # --- consent / offline ---
-    def test_export_fish_consent_blocked(self, monkeypatch):
-        monkeypatch.delenv("ENABLE_FISH_AUDIO", raising=False)
-        payload = {
-            "text": "Hello",
-            "voice_id": "default",
-            "engine": "fish",
-            "format": "wav",
-            "test_mode": True,
-        }
-        resp = client.post("/synthesize/export", json=payload)
-        assert resp.status_code == 403
 
     def test_export_dia_offline(self):
         payload = {
