@@ -50,6 +50,8 @@ pip install -r requirements.txt
 export HF_TOKEN="your_huggingface_token"
 python scripts/download_models.py
 ```
+*Note: F5-TTS is not downloaded by default. Use `--include-f5` only if you accept the non-commercial/gated model path.*
+
 
 ### 4. Run the Unified Service
 ```bash
@@ -91,7 +93,7 @@ The single-process server exposes all endpoints unified under port 8000:
 pytest --ignore=tests/smoke/ -v
 
 # Run real-engine smoke tests under local GPU/WSL environment
-pytest tests/smoke/ -v
+RUN_REAL_SMOKE=1 pytest tests/smoke/ -v
 ```
 
 ## Benchmarks

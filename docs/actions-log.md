@@ -35,3 +35,7 @@
    * **Cache Key Sample Rate Consistency**: Removed the `sample_rate` parameter from the cache key payload in `get_cache_key()` (`app/audio/cache.py`). The sample rate is preserved and retrieved strictly from the sidecar metadata, preventing cache key mismatches when resampling profiles are used.
    * **Unit Tests**: Added `tests/test_blocker_fixes.py` containing tests verifying gated simulation behavior in `dev`/`test` modes and cache key consistency when `sample_rate` differs.
    * **Verification**: Verified that all 244 unit tests are passing successfully and regression greps pass.
+8. **README Documentation Cleanup**:
+   * **Smoke Test Commands**: Updated the smoke test execution example to explicitly include `RUN_REAL_SMOKE=1` environment variable gating to prevent users from seeing skips and thinking tests successfully executed real inference.
+   * **F5-TTS Opt-in Notes**: Added a clear notice in the Quick Start download section informing users that F5-TTS weights are skipped by default unless the non-commercial `--include-f5` flag is explicitly requested.
+
